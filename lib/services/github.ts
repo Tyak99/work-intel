@@ -42,6 +42,32 @@ export async function fetchGitHubData(username?: string, userId: string = 'user-
       per_page: 10
     });
 
+    // Filter out PRs that have already been approved by the user
+    const filteredReviewRequests = [];
+    for (const pr of reviewRequests.data.items) {
+      try {
+        const [owner, repo] = pr.repository_url.split('/').slice(-2);
+        const reviews = await octokit.rest.pulls.listReviews({
+          owner,
+          repo,
+          pull_number: pr.number
+        });
+        
+        // Check if the user has already approved this PR
+        const userApproved = reviews.data.some(review => 
+          review.user?.login === actualUsername && review.state === 'APPROVED'
+        );
+        
+        if (!userApproved) {
+          filteredReviewRequests.push(pr);
+        }
+      } catch (error) {
+        // If we can't fetch reviews, include the PR to be safe
+        console.warn(`Could not fetch reviews for PR ${pr.number}:`, error);
+        filteredReviewRequests.push(pr);
+      }
+    }
+
     const result = {
       pullRequests: pullRequests.data.items.map(pr => ({
         id: pr.id,
@@ -86,7 +112,7 @@ export async function fetchGitHubData(username?: string, userId: string = 'user-
         labels: issue.labels,
         assignees: (issue.assignees as any)?.map((a: any) => a.login)
       })),
-      reviewRequests: reviewRequests.data.items.map(pr => ({
+      reviewRequests: filteredReviewRequests.map(pr => ({
         id: pr.id,
         number: pr.number,
         title: pr.title,

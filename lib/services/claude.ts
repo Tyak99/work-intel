@@ -15,44 +15,93 @@ interface ToolData {
 export async function processBriefWithClaude(toolData: ToolData, userContext?: any): Promise<Brief> {
   const currentTime = new Date();
   
-  const prompt = `You are an AI work assistant helping a senior software engineer manage their daily tasks. 
+  const prompt = `You are a sophisticated AI work assistant for a senior software engineer. Your role is to act as an intelligent work analyst that understands context, finds hidden tasks, and reveals relationships across all work tools.
 
 CONTEXT:
 - Current time: ${currentTime.toISOString()}
 - User timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}
+- User role: Senior Software Engineer / Tech Lead
 
 RAW DATA FROM TOOLS:
 ${JSON.stringify(toolData, null, 2)}
 
-INSTRUCTIONS:
-1. Analyze all the provided data from Jira, GitHub, Gmail, and Calendar
-2. Extract and prioritize tasks based on urgency, blocking potential, and impact
-3. Find hidden tasks or action items in comments, emails, and descriptions
-4. Generate a structured daily brief with clear sections
-5. Identify correlations between different items (e.g., related PRs and Jira tickets)
+ADVANCED ANALYSIS INSTRUCTIONS:
+
+🔍 CORRELATION DETECTION:
+- Cross-reference ticket IDs, PR numbers, and keywords across all tools
+- Look for patterns: "relates to", "fixes", "blocked by", "depends on"
+- Identify temporal correlations (items updated around same time)
+- Find semantic connections between descriptions and comments
+
+🕵️ HIDDEN TASK DISCOVERY:
+- Extract action items from PR/ticket comments (e.g., "TODO: update docs", "needs testing")
+- Find commitments in email threads (e.g., "I'll review by Friday")
+- Identify follow-up actions mentioned in meetings
+- Detect blockers hidden in descriptions (e.g., "waiting for X team approval")
+
+🎯 INTELLIGENT PRIORITIZATION:
+Consider multiple factors:
+- Deadline proximity (due dates, meeting prep deadlines)
+- Blocking impact (how many people/teams are waiting)
+- Customer impact (production issues, user-facing features)
+- Dependency chains (what unlocks other work)
+- Urgency signals (all-caps, multiple pings, escalations)
+
+🧠 PATTERN RECOGNITION:
+- Identify recurring issues or themes
+- Detect anomalies (unusual activity, delayed items)
+- Find correlations between team activities
+- Recognize workflow patterns and bottlenecks
 
 OUTPUT FORMAT:
-Return a JSON object with this exact structure:
+Return a JSON object with enhanced structure:
 {
   "sections": [
     {
-      "type": "critical",
-      "title": "🎯 Critical Items",
+      "type": "critical|meetings|reviews|emails|progress|risks|observations",
+      "title": "Section title with emoji",
       "items": [
         {
           "title": "Brief descriptive title",
-          "description": "Detailed description with context",
+          "description": "Rich context with WHY this matters",
           "priority": "critical|high|medium|low",
-          "source": "jira|github|email|calendar",
+          "source": "jira|github|email|calendar|ai-discovered",
           "sourceId": "original ID from source system",
-          "url": "direct link to item (if available)"
+          "url": "direct link to item (if available)",
+          "correlations": [
+            {
+              "type": "explicit|semantic|temporal",
+              "relatedId": "ID of related item",
+              "relatedSource": "source system",
+              "confidence": 0.95,
+              "reason": "Brief explanation of the relationship"
+            }
+          ],
+          "blockingImpact": "Who or what this blocks",
+          "deadline": "YYYY-MM-DD or 'today'|'tomorrow'|'this week'",
+          "effort": "quick|medium|large",
+          "aiInsights": "Any additional AI observations about this item"
         }
-      ]
+      ],
+      "sectionInsights": "AI observations about this section overall"
     }
-  ]
+  ],
+  "overallInsights": {
+    "hiddenTasksFound": 3,
+    "criticalCorrelations": ["PR #1234 fixes Jira BE-789", "Meeting prep for architecture review"],
+    "workPatterns": ["High GitHub activity suggests sprint push", "Multiple Jira updates indicate escalation"],
+    "recommendations": ["Consider delegating reviews to unblock team", "Schedule follow-up for architecture decisions"]
+  }
 }
 
-Focus on today's priorities and include only actionable items. Be concise but provide enough context for decision making.`;
+FOCUS AREAS:
+- Be a detective: Find what's NOT explicitly stated but implied
+- Think like a tech lead: What would block the team? What needs attention?
+- Consider dependencies: What happens if this isn't done?
+- Look for signals: Tone, urgency markers, escalation patterns
+- Connect the dots: How do separate items relate to each other?
+
+Return only the JSON object. Be thorough but concise.`;
 
   try {
     const response = await anthropic.messages.create({
@@ -102,7 +151,11 @@ Focus on today's priorities and include only actionable items. Be concise but pr
     return {
       id: Math.random().toString(36).substr(2, 9),
       generatedAt: currentTime,
-      sections: parsedResponse.sections || []
+      sections: (parsedResponse.sections || []).map((section: any) => ({
+        ...section,
+        id: section.id || section.type || Math.random().toString(36).substr(2, 9)
+      })),
+      overallInsights: parsedResponse.overallInsights
     };
   } catch (error) {
     console.error('Error processing with Claude:', error);

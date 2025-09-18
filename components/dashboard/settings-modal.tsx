@@ -37,7 +37,7 @@ const tools = [
     id: 'gmail',
     name: 'Gmail',
     icon: Mail,
-    description: 'Connect to Gmail for email analysis',
+    description: 'Read-only access to Gmail for email analysis',
     authType: 'oauth',
     connected: false,
   },
@@ -45,7 +45,7 @@ const tools = [
     id: 'calendar',
     name: 'Google Calendar',
     icon: Calendar,
-    description: 'Connect to Google Calendar for meeting prep',
+    description: 'Read-only access to Google Calendar for meeting prep',
     authType: 'oauth',
     connected: true,
   },
@@ -122,9 +122,59 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
   };
 
-  const handleOAuthConnect = (toolId: string) => {
-    // TODO: Implement OAuth flow for Gmail/Calendar
-    toast.error('OAuth integration coming soon!');
+  const handleOAuthConnect = async (toolId: string) => {
+    if (toolId === 'gmail' || toolId === 'calendar') {
+      // Both Gmail and Calendar use the same Nylas OAuth flow
+      setConnecting(prev => ({ ...prev, gmail: true, calendar: true }));
+
+      try {
+        const response = await fetch('/api/tools/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: 'user-1', // TODO: Get from auth context
+            toolType: 'nylas',
+            credentials: {}
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.authUrl) {
+          // Redirect to Nylas OAuth
+          window.location.href = result.authUrl;
+        } else {
+          toast.error('Failed to initiate authentication');
+        }
+      } catch (error) {
+        toast.error('Error connecting to email/calendar');
+      } finally {
+        setConnecting(prev => ({ ...prev, gmail: false, calendar: false }));
+      }
+    } else {
+      toast.error('OAuth integration coming soon!');
+    }
+  };
+
+  const handleDisconnect = async (toolId: string) => {
+    if (toolId === 'gmail' || toolId === 'calendar') {
+      try {
+        const response = await fetch('/api/auth/nylas/disconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: 'user-1' })
+        });
+
+        if (response.ok) {
+          await refreshToolStatus();
+          toast.success('Successfully disconnected email and calendar');
+        } else {
+          toast.error('Failed to disconnect');
+        }
+      } catch (error) {
+        toast.error('Error disconnecting');
+      }
+    }
   };
 
   return (
@@ -286,19 +336,39 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       </div>
                     ) : (
                       <div className="flex items-center justify-between">
-                        <p className="text-sm text-slate-600 dark:text-slate-400">
-                          Uses OAuth 2.0 for secure authentication
-                        </p>
-                        <Button 
-                          onClick={() => handleOAuthConnect(tool.id)}
-                          variant={isConnected ? "outline" : "default"}
-                          disabled={isConnecting}
-                        >
-                          {isConnecting ? (
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          ) : null}
-                          {isConnected ? 'Reconnect' : 'Connect with OAuth'}
-                        </Button>
+                        <div>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            {tool.id === 'gmail' || tool.id === 'calendar'
+                              ? 'Secure read-only access via Nylas (no editing/deleting permissions)'
+                              : 'Uses OAuth 2.0 for secure authentication'}
+                          </p>
+                          {isConnected && status?.lastSync && (
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                              Last synced: {new Date(status.lastSync).toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex space-x-2">
+                          {isConnected && (tool.id === 'gmail' || tool.id === 'calendar') && (
+                            <Button
+                              onClick={() => handleDisconnect(tool.id)}
+                              variant="outline"
+                              size="sm"
+                            >
+                              Disconnect
+                            </Button>
+                          )}
+                          <Button
+                            onClick={() => handleOAuthConnect(tool.id)}
+                            variant={isConnected ? "outline" : "default"}
+                            disabled={isConnecting}
+                          >
+                            {isConnecting ? (
+                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : null}
+                            {isConnected ? 'Reconnect' : 'Connect with Nylas'}
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </CardContent>

@@ -149,10 +149,10 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       const data = await response.json();
       const generatedBrief = data.brief;
       
-      // Extract tasks from brief and add to todos
+      // Extract tasks from brief and add to todos with enhanced metadata
       const extractedTodos = generatedBrief.sections.flatMap((section: any) =>
         section.items
-          .filter((item: any) => item.priority === 'critical' || item.priority === 'high')
+          .filter((item: any) => item.priority === 'critical' || item.priority === 'high' || item.source === 'ai-discovered')
           .map((item: any) => ({
             id: Math.random().toString(36).substr(2, 9),
             title: item.title,
@@ -162,6 +162,11 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
             source: (item.source as Todo['source']) || 'manual' as const,
             sourceId: item.sourceId,
             url: item.url,
+            correlations: item.correlations,
+            blockingImpact: item.blockingImpact,
+            deadline: item.deadline,
+            effort: item.effort,
+            aiInsights: item.aiInsights,
             createdAt: new Date(),
           }))
       );
@@ -183,7 +188,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       // Fall back to mock data on error
       const extractedTodos = mockBrief.sections.flatMap(section =>
         section.items
-          .filter(item => item.priority === 'critical' || item.priority === 'high')
+          .filter(item => item.priority === 'critical' || item.priority === 'high' || item.source === 'ai-discovered')
           .map(item => ({
             id: Math.random().toString(36).substr(2, 9),
             title: item.title,
@@ -193,6 +198,11 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
             source: (item.source as Todo['source']) || 'manual' as const,
             sourceId: item.sourceId,
             url: item.url,
+            correlations: undefined,
+            blockingImpact: undefined,
+            deadline: undefined,
+            effort: undefined,
+            aiInsights: undefined,
             createdAt: new Date(),
           }))
       );

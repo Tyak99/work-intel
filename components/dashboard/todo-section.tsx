@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Github, Calendar, Mail, ExternalLink } from 'lucide-react';
+import { Plus, Github, Calendar, Mail, ExternalLink, Link2, Clock, Zap, Users, Lightbulb, Brain } from 'lucide-react';
 import { useState } from 'react';
 import { Todo } from '@/lib/types';
 
@@ -22,6 +22,7 @@ const sourceIcons = {
   email: Mail,
   calendar: Calendar,
   manual: Plus,
+  'ai-discovered': Brain,
 };
 
 const priorityColors = {
@@ -173,23 +174,87 @@ function TodoItem({ todo, onToggle, onUpdate }: TodoItemProps) {
             >
               {todo.priority}
             </Badge>
+            
+            {todo.source === 'ai-discovered' && (
+              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                <Brain className="w-3 h-3 mr-1" />
+                AI Found
+              </Badge>
+            )}
           </div>
           
-          <div className="flex items-center space-x-2 text-xs text-slate-600 dark:text-slate-400">
-            <SourceIcon className="w-3 h-3" />
-            <span className="capitalize">{todo.source}</span>
-            {todo.sourceId && (
-              <>
-                <span>•</span>
-                <span>{todo.sourceId}</span>
-              </>
+          {/* Enhanced metadata row */}
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-slate-400 mb-2">
+            <div className="flex items-center space-x-1">
+              <SourceIcon className="w-3 h-3" />
+              <span className="capitalize">{todo.source}</span>
+              {todo.sourceId && (
+                <>
+                  <span>•</span>
+                  <span>{todo.sourceId}</span>
+                </>
+              )}
+            </div>
+            
+            {todo.effort && (
+              <Badge variant="outline" className="text-xs">
+                <Zap className="w-3 h-3 mr-1" />
+                {todo.effort}
+              </Badge>
+            )}
+            
+            {todo.deadline && (
+              <Badge variant="outline" className="text-xs">
+                <Clock className="w-3 h-3 mr-1" />
+                {todo.deadline}
+              </Badge>
+            )}
+            
+            {todo.blockingImpact && (
+              <Badge variant="outline" className="text-xs text-orange-700 dark:text-orange-300">
+                <Users className="w-3 h-3 mr-1" />
+                {todo.blockingImpact}
+              </Badge>
             )}
           </div>
           
           {todo.description && (
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">
               {todo.description}
             </p>
+          )}
+          
+          {/* Correlations */}
+          {todo.correlations && todo.correlations.length > 0 && (
+            <div className="mb-2">
+              <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-1 flex items-center">
+                <Link2 className="w-3 h-3 mr-1" />
+                Related Items
+              </p>
+              <div className="space-y-1">
+                {todo.correlations.slice(0, 2).map((correlation, index) => (
+                  <div key={index} className="flex items-center space-x-2 text-xs">
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      correlation.confidence > 0.8 ? 'bg-green-500' : 
+                      correlation.confidence > 0.6 ? 'bg-yellow-500' : 'bg-gray-500'
+                    }`} />
+                    <span className="text-slate-600 dark:text-slate-400">
+                      {correlation.relatedSource}: {correlation.relatedId}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* AI Insights */}
+          {todo.aiInsights && (
+            <div className="p-2 bg-indigo-50/50 dark:bg-indigo-950/30 rounded border border-indigo-200 dark:border-indigo-800 mb-2">
+              <div className="flex items-start space-x-2">
+                <Lightbulb className="w-3 h-3 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-indigo-800 dark:text-indigo-200">{todo.aiInsights}</p>
+              </div>
+            </div>
           )}
           
           {todo.dueDate && (
