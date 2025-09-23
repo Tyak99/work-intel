@@ -185,9 +185,9 @@ export async function getEventsInRange(
     const events = await nylas.events.list({
       identifier: grant.grantId,
       queryParams: {
-        calendar_id: primaryCalendar.id,
-        start: Math.floor(startDate.getTime() / 1000),
-        end: Math.floor(endDate.getTime() / 1000),
+        calendarId: primaryCalendar.id,
+        start: Math.floor(startDate.getTime() / 1000).toString(),
+        end: Math.floor(endDate.getTime() / 1000).toString(),
         limit: 100,
       },
     });
@@ -260,19 +260,20 @@ export async function getFreeBusyTime(
       identifier: grant.grantId,
       requestBody: {
         emails: [grant.email],
-        start_time: Math.floor(startTime.getTime() / 1000),
-        end_time: Math.floor(endTime.getTime() / 1000),
+        startTime: Math.floor(startTime.getTime() / 1000),
+        endTime: Math.floor(endTime.getTime() / 1000),
       },
     });
 
     const busySlots: FreeBusySlot[] = [];
 
-    if (availability.data?.[0]?.time_slots) {
-      availability.data[0].time_slots.forEach((slot: any) => {
+    const freeBusyData = availability.data?.[0] as any;
+    if (freeBusyData?.timeSlots) {
+      freeBusyData.timeSlots.forEach((slot: any) => {
         if (slot.status === 'busy') {
           busySlots.push({
-            start: new Date(slot.start_time * 1000),
-            end: new Date(slot.end_time * 1000),
+            start: new Date(slot.startTime * 1000),
+            end: new Date(slot.endTime * 1000),
             status: 'busy',
           });
         }

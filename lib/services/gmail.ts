@@ -207,13 +207,14 @@ export async function getEmailThread(userId: string, threadId: string): Promise<
       threadId,
     });
 
-    const messages = thread.data.messages?.map(transformNylasMessage) || [];
+    const threadData = thread.data as any;
+    const messages = threadData.messages?.map(transformNylasMessage) || [];
 
     const participants = new Set<string>();
-    messages.forEach(msg => {
+    messages.forEach((msg: any) => {
       participants.add(msg.from);
-      msg.to.forEach(to => participants.add(to));
-      msg.cc?.forEach(cc => participants.add(cc));
+      msg.to?.forEach((to: string) => participants.add(to));
+      msg.cc?.forEach((cc: string) => participants.add(cc));
     });
 
     return {
@@ -250,7 +251,7 @@ export async function getEmailsByLabel(
       identifier: grant.grantId,
       queryParams: {
         limit,
-        in: label,
+        in: [label],
       },
     });
 
