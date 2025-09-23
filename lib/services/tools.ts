@@ -127,7 +127,7 @@ export async function getToolStatus(userId: string): Promise<Record<string, Tool
   }
 
   // Nylas Status (covers both Gmail and Calendar)
-  const nylasGrant = getUserGrant(userId);
+  const nylasGrant = await getUserGrant(userId);
   if (nylasGrant) {
     try {
       const isConnected = await testNylasConnection(userId);

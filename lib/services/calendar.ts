@@ -120,7 +120,7 @@ function transformNylasEvent(nylasEvent: any): CalendarEvent {
 }
 
 export async function getCalendars(userId: string): Promise<Calendar[]> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }
@@ -132,7 +132,7 @@ export async function getCalendars(userId: string): Promise<Calendar[]> {
       identifier: grant.grantId,
     });
 
-    updateLastSync(userId);
+    await updateLastSync(userId);
 
     return calendars.data.map(transformNylasCalendar);
   } catch (error) {
@@ -167,7 +167,7 @@ export async function getEventsInRange(
   startDate: Date,
   endDate: Date
 ): Promise<CalendarEvent[]> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }
@@ -186,13 +186,13 @@ export async function getEventsInRange(
       identifier: grant.grantId,
       queryParams: {
         calendar_id: primaryCalendar.id,
-        starts_after: Math.floor(startDate.getTime() / 1000),
-        ends_before: Math.floor(endDate.getTime() / 1000),
+        start: Math.floor(startDate.getTime() / 1000),
+        end: Math.floor(endDate.getTime() / 1000),
         limit: 100,
       },
     });
 
-    updateLastSync(userId);
+    await updateLastSync(userId);
 
     return events.data
       .map(transformNylasEvent)
@@ -208,7 +208,7 @@ export async function getEventDetails(
   eventId: string,
   calendarId?: string
 ): Promise<CalendarEvent> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }
@@ -239,7 +239,7 @@ export async function getFreeBusyTime(
   startTime: Date,
   endTime: Date
 ): Promise<FreeBusySlot[]> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }
@@ -313,7 +313,7 @@ export async function getFreeBusyTime(
 }
 
 export async function getRecurringEvents(userId: string): Promise<CalendarEvent[]> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }

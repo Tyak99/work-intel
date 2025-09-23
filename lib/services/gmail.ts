@@ -76,7 +76,7 @@ function transformNylasMessage(nylasMessage: any): EmailMessage {
 }
 
 export async function getRecentEmails(userId: string, limit: number = 20): Promise<EmailMessage[]> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }
@@ -88,11 +88,10 @@ export async function getRecentEmails(userId: string, limit: number = 20): Promi
       identifier: grant.grantId,
       queryParams: {
         limit,
-        in: 'inbox',
       },
     });
 
-    updateLastSync(userId);
+    await updateLastSync(userId);
 
     return messages.data.map(transformNylasMessage);
   } catch (error) {
@@ -102,7 +101,7 @@ export async function getRecentEmails(userId: string, limit: number = 20): Promi
 }
 
 export async function getUnreadEmails(userId: string, limit: number = 50): Promise<EmailMessage[]> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }
@@ -115,11 +114,10 @@ export async function getUnreadEmails(userId: string, limit: number = 50): Promi
       queryParams: {
         limit,
         unread: true,
-        in: 'inbox',
       },
     });
 
-    updateLastSync(userId);
+    await updateLastSync(userId);
 
     return messages.data.map(transformNylasMessage);
   } catch (error) {
@@ -129,7 +127,7 @@ export async function getUnreadEmails(userId: string, limit: number = 50): Promi
 }
 
 export async function getImportantEmails(userId: string, limit: number = 20): Promise<EmailMessage[]> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }
@@ -145,7 +143,7 @@ export async function getImportantEmails(userId: string, limit: number = 20): Pr
       },
     });
 
-    updateLastSync(userId);
+    await updateLastSync(userId);
 
     return messages.data.map(transformNylasMessage);
   } catch (error) {
@@ -158,7 +156,7 @@ export async function searchEmails(
   userId: string,
   options: EmailSearchOptions
 ): Promise<EmailMessage[]> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }
@@ -186,7 +184,7 @@ export async function searchEmails(
       queryParams,
     });
 
-    updateLastSync(userId);
+    await updateLastSync(userId);
 
     return messages.data.map(transformNylasMessage);
   } catch (error) {
@@ -196,7 +194,7 @@ export async function searchEmails(
 }
 
 export async function getEmailThread(userId: string, threadId: string): Promise<EmailThread> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }
@@ -240,7 +238,7 @@ export async function getEmailsByLabel(
   label: string,
   limit: number = 20
 ): Promise<EmailMessage[]> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }
@@ -256,7 +254,7 @@ export async function getEmailsByLabel(
       },
     });
 
-    updateLastSync(userId);
+    await updateLastSync(userId);
 
     return messages.data.map(transformNylasMessage);
   } catch (error) {
@@ -276,7 +274,7 @@ export async function getTodayEmails(userId: string): Promise<EmailMessage[]> {
 }
 
 export async function getEmailsNeedingResponse(userId: string): Promise<EmailMessage[]> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     throw new Error('No Nylas grant found for user');
   }

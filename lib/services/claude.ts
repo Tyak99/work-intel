@@ -35,9 +35,12 @@ ADVANCED ANALYSIS INSTRUCTIONS:
 
 🕵️ HIDDEN TASK DISCOVERY:
 - Extract action items from PR/ticket comments (e.g., "TODO: update docs", "needs testing")
-- Find commitments in email threads (e.g., "I'll review by Friday")
-- Identify follow-up actions mentioned in meetings
+- Find commitments in email threads (e.g., "I'll review by Friday", "will send update Monday")
+- Identify follow-up actions mentioned in meeting descriptions/invites
 - Detect blockers hidden in descriptions (e.g., "waiting for X team approval")
+- Find emails requiring responses (questions, requests, mentions)
+- Extract meeting prep requirements from calendar events
+- Identify deadlines mentioned in email content
 
 🎯 INTELLIGENT PRIORITIZATION:
 Consider multiple factors:
@@ -52,20 +55,25 @@ Consider multiple factors:
 - Detect anomalies (unusual activity, delayed items)
 - Find correlations between team activities
 - Recognize workflow patterns and bottlenecks
+- Connect email discussions to GitHub PRs/Jira tickets
+- Link calendar events to project activities
+- Identify meeting prep based on email context
+- Spot urgent emails requiring immediate attention
+- Calculate available focus time between meetings
 
 OUTPUT FORMAT:
 Return a JSON object with enhanced structure:
 {
   "sections": [
     {
-      "type": "critical|meetings|reviews|emails|progress|risks|observations",
+      "type": "critical|meetings|reviews|emails|progress|risks|observations|focus_time",
       "title": "Section title with emoji",
       "items": [
         {
           "title": "Brief descriptive title",
           "description": "Rich context with WHY this matters",
           "priority": "critical|high|medium|low",
-          "source": "jira|github|email|calendar|ai-discovered",
+          "source": "jira|github|gmail|calendar|ai-discovered",
           "sourceId": "original ID from source system",
           "url": "direct link to item (if available)",
           "correlations": [
@@ -105,7 +113,7 @@ Return only the JSON object. Be thorough but concise.`;
 
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-4-sonnet',
       max_tokens: 8000,
       temperature: 0.1, // Lower temperature for more consistent JSON
       messages: [

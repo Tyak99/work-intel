@@ -1,4 +1,5 @@
 import Nylas from 'nylas';
+import { supabase } from '../supabase';
 
 export interface NylasGrant {
   grantId: string;
@@ -8,8 +9,6 @@ export interface NylasGrant {
   createdAt: Date;
   lastSync?: Date;
 }
-
-const userGrants: Record<string, NylasGrant> = {};
 
 let nylasClient: Nylas | null = null;
 
@@ -65,10 +64,11 @@ export async function exchangeCodeForGrant(code: string, userId: string): Promis
 
     const nylas = getNylasClient();
 
-    // Nylas v3 OAuth token exchange with API key authentication
+    // Nylas v3 OAuth token exchange for web platform
+    // Web platform requires client_secret in body, not just API key in header
     const tokenBody = {
       client_id: clientId,
-      client_secret: process.env.NYLAS_API_KEY, // Use API Key as client_secret
+      client_secret: process.env.NYLAS_API_KEY, // Use API key as client_secret per Nylas v3 docs
       grant_type: 'authorization_code',
       code,
       redirect_uri: redirectUri,
@@ -76,11 +76,19 @@ export async function exchangeCodeForGrant(code: string, userId: string): Promis
     };
 
     const apiUri = process.env.NYLAS_API_URI || 'https://api.us.nylas.com';
+
+    console.log('Token exchange request:', {
+      url: `${apiUri}/v3/connect/token`,
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      has_client_secret: !!process.env.NYLAS_API_KEY,
+      code_length: code.length
+    });
+
     const response = await fetch(`${apiUri}/v3/connect/token`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        // No Authorization header needed for token exchange
       },
       body: JSON.stringify(tokenBody),
     });
@@ -115,7 +123,23 @@ export async function exchangeCodeForGrant(code: string, userId: string): Promis
       lastSync: new Date(),
     };
 
-    userGrants[userId] = grant;
+    // Save grant to Supabase
+    const { error } = await supabase
+      .from('nylas_grants')
+      .upsert({
+        user_id: userId,
+        grant_id: grant.grantId,
+        email: grant.email,
+        provider: grant.provider,
+        scopes: grant.scopes,
+        created_at: grant.createdAt.toISOString(),
+        last_sync: grant.lastSync?.toISOString()
+      });
+
+    if (error) {
+      console.error('Error saving grant to database:', error);
+      // Continue anyway - the grant is still valid for this session
+    }
 
     return grant;
   } catch (error) {
@@ -124,16 +148,61 @@ export async function exchangeCodeForGrant(code: string, userId: string): Promis
   }
 }
 
-export function getUserGrant(userId: string): NylasGrant | null {
-  return userGrants[userId] || null;
+export async function getUserGrant(userId: string): Promise<NylasGrant | null> {
+  try {
+    const { data, error } = await supabase
+      .from('nylas_grants')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No grant found
+        return null;
+      }
+      console.error('Error fetching grant from database:', error);
+      return null;
+    }
+
+    return {
+      grantId: data.grant_id,
+      email: data.email,
+      provider: data.provider,
+      scopes: data.scopes,
+      createdAt: new Date(data.created_at),
+      lastSync: data.last_sync ? new Date(data.last_sync) : undefined
+    };
+  } catch (error) {
+    console.error('Error fetching grant:', error);
+    return null;
+  }
 }
 
-export function setUserGrant(userId: string, grant: NylasGrant): void {
-  userGrants[userId] = grant;
+export async function setUserGrant(userId: string, grant: NylasGrant): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('nylas_grants')
+      .upsert({
+        user_id: userId,
+        grant_id: grant.grantId,
+        email: grant.email,
+        provider: grant.provider,
+        scopes: grant.scopes,
+        created_at: grant.createdAt.toISOString(),
+        last_sync: grant.lastSync?.toISOString()
+      });
+
+    if (error) {
+      console.error('Error saving grant to database:', error);
+    }
+  } catch (error) {
+    console.error('Error setting grant:', error);
+  }
 }
 
 export async function revokeGrant(userId: string): Promise<void> {
-  const grant = getUserGrant(userId);
+  const grant = await getUserGrant(userId);
   if (!grant) {
     return;
   }
@@ -141,6 +210,7 @@ export async function revokeGrant(userId: string): Promise<void> {
   try {
     const apiUri = process.env.NYLAS_API_URI || 'https://api.us.nylas.com';
 
+    // Revoke from Nylas
     await fetch(`${apiUri}/v3/grants/${grant.grantId}`, {
       method: 'DELETE',
       headers: {
@@ -148,7 +218,15 @@ export async function revokeGrant(userId: string): Promise<void> {
       },
     });
 
-    delete userGrants[userId];
+    // Delete from Supabase
+    const { error } = await supabase
+      .from('nylas_grants')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error deleting grant from database:', error);
+    }
   } catch (error) {
     console.error('Error revoking grant:', error);
     throw error;
@@ -157,7 +235,7 @@ export async function revokeGrant(userId: string): Promise<void> {
 
 export async function testNylasConnection(userId: string): Promise<boolean> {
   try {
-    const grant = getUserGrant(userId);
+    const grant = await getUserGrant(userId);
     if (!grant) {
       return false;
     }
@@ -178,9 +256,17 @@ export async function testNylasConnection(userId: string): Promise<boolean> {
   }
 }
 
-export function updateLastSync(userId: string): void {
-  const grant = getUserGrant(userId);
-  if (grant) {
-    grant.lastSync = new Date();
+export async function updateLastSync(userId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('nylas_grants')
+      .update({ last_sync: new Date().toISOString() })
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Error updating last sync:', error);
+    }
+  } catch (error) {
+    console.error('Error updating last sync:', error);
   }
 }

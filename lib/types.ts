@@ -7,7 +7,7 @@ export interface Brief {
 
 export interface BriefSection {
   id: string;
-  type: 'critical' | 'meetings' | 'reviews' | 'emails' | 'progress' | 'risks' | 'observations';
+  type: 'critical' | 'meetings' | 'reviews' | 'emails' | 'progress' | 'risks' | 'observations' | 'focus_time';
   title: string;
   items: BriefItem[];
   sectionInsights?: string;
@@ -48,7 +48,7 @@ export interface Todo {
   description: string;
   completed: boolean;
   priority: 'critical' | 'high' | 'medium' | 'low';
-  source: 'jira' | 'github' | 'email' | 'calendar' | 'manual' | 'ai-discovered';
+  source: 'jira' | 'github' | 'gmail' | 'calendar' | 'manual' | 'ai-discovered';
   sourceId?: string;
   url?: string;
   dueDate?: Date;
