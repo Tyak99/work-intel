@@ -9,7 +9,8 @@
     "lint": "next lint",
     "chrome:debug": "./scripts/chrome-debug.sh",
     "chrome:status": "./scripts/chrome-debug-status.sh",
-    "chrome:stop": "./scripts/chrome-debug-stop.sh"
+    "chrome:stop": "./scripts/chrome-debug-stop.sh",
+    "profile:sync": "echo Run from LOCAL: rsync -avz ~/.chrome-debug-profile/ ubuntu@167.99.136.83:~/snap/chromium/common/chrome-debug-profile/"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.61.0",
