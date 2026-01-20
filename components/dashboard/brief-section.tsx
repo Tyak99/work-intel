@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronRight, Target, Calendar, Eye, Mail, AlertTriangle, Sparkles, Clock, Users, ClipboardCheck } from 'lucide-react';
+import { ChevronDown, ChevronRight, Target, Calendar, Eye, Mail, AlertTriangle, Sparkles, Clock, Users, ClipboardCheck, Wand2, Loader2, Check } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Brief, BriefAlert, BriefListItem, MeetingItem } from '@/lib/types';
+import { useDashboardStore } from '@/lib/store';
+import { SmartActionModal } from './smart-action-modal';
 
 interface BriefSectionProps {
   brief: Brief | null;
@@ -37,6 +39,14 @@ const sectionColors = {
 
 export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [actionModalOpen, setActionModalOpen] = useState(false);
+
+  const {
+    prepareAction,
+    isPreparingAction,
+    completedActions,
+    preparingAction,
+  } = useDashboardStore();
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections);
@@ -46,6 +56,16 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
       newExpanded.add(sectionId);
     }
     setExpandedSections(newExpanded);
+  };
+
+  const handlePrepareAction = async (
+    type: 'email_reply' | 'pr_nudge' | 'meeting_prep',
+    briefItemId: string,
+    sourceId: string,
+    additionalData?: Record<string, any>
+  ) => {
+    setActionModalOpen(true);
+    await prepareAction(briefItemId, type, sourceId, additionalData);
   };
 
   const sections = useMemo(() => {
@@ -89,7 +109,8 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         icon: sectionIcons.meetings,
         color: sectionColors.meetings,
         count: brief.meetings?.length || 0,
-        content: renderMeetings(brief.meetings || [])
+        items: brief.meetings || [],
+        actionType: 'meeting_prep' as const,
       },
       {
         id: 'prsToReview',
@@ -97,7 +118,8 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         icon: sectionIcons.prsToReview,
         color: sectionColors.prsToReview,
         count: brief.prsToReview?.length || 0,
-        content: renderBriefItems(brief.prsToReview || [])
+        items: brief.prsToReview || [],
+        actionType: null,
       },
       {
         id: 'myPrsWaiting',
@@ -105,7 +127,8 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         icon: sectionIcons.myPrsWaiting,
         color: sectionColors.myPrsWaiting,
         count: brief.myPrsWaiting?.length || 0,
-        content: renderBriefItems(brief.myPrsWaiting || [])
+        items: brief.myPrsWaiting || [],
+        actionType: 'pr_nudge' as const,
       },
       {
         id: 'emails',
@@ -113,7 +136,8 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         icon: sectionIcons.emails,
         color: sectionColors.emails,
         count: brief.emailsToActOn?.length || 0,
-        content: renderBriefItems(brief.emailsToActOn || [])
+        items: brief.emailsToActOn || [],
+        actionType: 'email_reply' as const,
       },
       {
         id: 'jira',
@@ -121,7 +145,8 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         icon: sectionIcons.jira,
         color: sectionColors.jira,
         count: brief.jiraTasks?.length || 0,
-        content: renderBriefItems(brief.jiraTasks || [])
+        items: brief.jiraTasks || [],
+        actionType: null,
       },
       {
         id: 'alerts',
@@ -129,7 +154,8 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         icon: sectionIcons.alerts,
         color: sectionColors.alerts,
         count: brief.alerts?.length || 0,
-        content: renderAlerts(brief.alerts || [])
+        alerts: brief.alerts || [],
+        actionType: null,
       },
       {
         id: 'notes',
@@ -137,27 +163,16 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         icon: sectionIcons.notes,
         color: sectionColors.notes,
         count: legacyItems.length,
-        content: legacyItems.length > 0 ? (
-          <div className="space-y-2">
-            {legacyItems.map((item, index) => (
-              <div key={`${item.sourceId}-${index}`} className="p-3 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-sm">{item.title}</h4>
-                  <Badge variant="outline" className="text-xs">{item.priority}</Badge>
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{item.summary}</p>
-              </div>
-            ))}
-          </div>
-        ) : null
+        legacyItems,
+        actionType: null,
       }
     ];
   }, [brief]);
 
-  const hasContent = sections.some(section => section.count > 0 && section.content);
+  const hasContent = sections.some(section => section.count > 0);
 
   const expandAll = () => {
-    setExpandedSections(new Set(sections.filter(section => section.content).map(section => section.id)));
+    setExpandedSections(new Set(sections.filter(section => section.count > 0).map(section => section.id)));
   };
 
   const collapseAll = () => {
@@ -239,9 +254,56 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {sections.filter(section => section.content && section.count > 0).map((section) => {
+        {sections.filter(section => section.count > 0).map((section) => {
           const Icon = section.icon;
           const isExpanded = expandedSections.has(section.id);
+
+          // Render section content based on type
+          const renderSectionContent = () => {
+            if (section.id === 'focus') {
+              return section.content;
+            }
+            if (section.id === 'meetings' && 'items' in section) {
+              return renderMeetings(
+                section.items as MeetingItem[],
+                handlePrepareAction,
+                isPreparingAction,
+                completedActions
+              );
+            }
+            if (section.id === 'alerts' && 'alerts' in section) {
+              return renderAlerts(section.alerts as BriefAlert[]);
+            }
+            if (section.id === 'notes' && 'legacyItems' in section) {
+              const items = section.legacyItems as Array<{ title: string; summary: string; priority: string; sourceId: string }>;
+              return items.length > 0 ? (
+                <div className="space-y-2">
+                  {items.map((item, index) => (
+                    <div key={`${item.sourceId}-${index}`} className="p-3 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-sm">{item.title}</h4>
+                        <Badge variant="outline" className="text-xs">{item.priority}</Badge>
+                      </div>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{item.summary}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null;
+            }
+            if ('items' in section && section.actionType) {
+              return renderBriefItems(
+                section.items as BriefListItem[],
+                section.actionType,
+                handlePrepareAction,
+                isPreparingAction,
+                completedActions
+              );
+            }
+            if ('items' in section) {
+              return renderBriefItems(section.items as BriefListItem[], null, handlePrepareAction, isPreparingAction, completedActions);
+            }
+            return null;
+          };
 
           return (
             <div key={section.id} className={`border rounded-lg ${section.color}`}>
@@ -266,7 +328,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
               {isExpanded && (
                 <div className="px-4 pb-4">
                   <Separator className="mb-4" />
-                  {section.content}
+                  {renderSectionContent()}
                 </div>
               )}
             </div>
@@ -284,74 +346,169 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
           <div className="text-sm text-slate-500 dark:text-slate-400">No brief items found for today.</div>
         )}
       </CardContent>
+
+      <SmartActionModal
+        open={actionModalOpen}
+        onClose={() => setActionModalOpen(false)}
+      />
     </Card>
   );
 }
 
-function renderMeetings(meetings: MeetingItem[]) {
+type PrepareActionHandler = (
+  type: 'email_reply' | 'pr_nudge' | 'meeting_prep',
+  briefItemId: string,
+  sourceId: string,
+  additionalData?: Record<string, any>
+) => void;
+
+function renderMeetings(
+  meetings: MeetingItem[],
+  onPrepareAction: PrepareActionHandler,
+  isPreparing: boolean,
+  completedActions: Set<string>
+) {
   if (meetings.length === 0) return null;
 
   return (
     <div className="space-y-3">
-      {meetings.map(meeting => (
-        <div key={meeting.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-blue-200 dark:border-blue-800">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-sm">{meeting.title}</h4>
-            <Badge variant="outline" className="text-xs">
-              <Clock className="w-3 h-3 mr-1" />
-              {meeting.time}
-            </Badge>
-          </div>
-          {meeting.prepNeeded && (
-            <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">Prep: {meeting.prepNeeded}</p>
-          )}
-          {meeting.attendees.length > 0 && (
-            <div className="flex items-center text-xs text-slate-600 dark:text-slate-400 mt-2">
-              <Users className="w-3 h-3 mr-1" />
-              {meeting.attendees.slice(0, 4).join(', ')}{meeting.attendees.length > 4 ? '...' : ''}
+      {meetings.map(meeting => {
+        const isCompleted = completedActions.has(meeting.id);
+
+        return (
+          <div key={meeting.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-sm">{meeting.title}</h4>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  <Clock className="w-3 h-3 mr-1" />
+                  {meeting.time}
+                </Badge>
+              </div>
             </div>
-          )}
-        </div>
-      ))}
+            {meeting.prepNeeded && (
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">Prep: {meeting.prepNeeded}</p>
+            )}
+            {meeting.attendees.length > 0 && (
+              <div className="flex items-center text-xs text-slate-600 dark:text-slate-400 mt-2">
+                <Users className="w-3 h-3 mr-1" />
+                {meeting.attendees.slice(0, 4).join(', ')}{meeting.attendees.length > 4 ? '...' : ''}
+              </div>
+            )}
+            <div className="mt-3 flex items-center gap-2">
+              {isCompleted ? (
+                <Badge variant="secondary" className="text-xs text-green-600">
+                  <Check className="w-3 h-3 mr-1" />
+                  Done
+                </Badge>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  disabled={isPreparing}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPrepareAction('meeting_prep', meeting.id, meeting.id);
+                  }}
+                >
+                  {isPreparing ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <Wand2 className="w-3 h-3 mr-1" />
+                  )}
+                  Prepare
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function renderBriefItems(items: BriefListItem[]) {
+function renderBriefItems(
+  items: BriefListItem[],
+  actionType: 'email_reply' | 'pr_nudge' | 'meeting_prep' | null,
+  onPrepareAction: PrepareActionHandler,
+  isPreparing: boolean,
+  completedActions: Set<string>
+) {
   if (items.length === 0) return null;
 
   return (
     <div className="space-y-3">
-      {items.map(item => (
-        <div key={item.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h4 className="font-medium text-sm mb-1">{item.title}</h4>
-              <p className="text-xs text-slate-600 dark:text-slate-400">{item.summary}</p>
-              {item.context && (
-                <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">{item.context}</p>
-              )}
-              <div className="flex flex-wrap items-center gap-2 mt-3">
-                <Badge variant={item.priority === 'critical' ? 'destructive' : 'secondary'} className="text-xs">
-                  {item.priority}
-                </Badge>
-                {item.actionType && (
-                  <Badge variant="outline" className="text-xs">{item.actionType}</Badge>
+      {items.map(item => {
+        const isCompleted = completedActions.has(item.id);
+        const showPrepareButton = actionType !== null;
+
+        return (
+          <div key={item.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h4 className="font-medium text-sm mb-1">{item.title}</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400">{item.summary}</p>
+                {item.context && (
+                  <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">{item.context}</p>
                 )}
-                {item.deadline && (
-                  <Badge variant="outline" className="text-xs">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {item.deadline}
+                <div className="flex flex-wrap items-center gap-2 mt-3">
+                  <Badge variant={item.priority === 'critical' ? 'destructive' : 'secondary'} className="text-xs">
+                    {item.priority}
                   </Badge>
+                  {item.actionType && (
+                    <Badge variant="outline" className="text-xs">{item.actionType}</Badge>
+                  )}
+                  {item.deadline && (
+                    <Badge variant="outline" className="text-xs">
+                      <Clock className="w-3 h-3 mr-1" />
+                      {item.deadline}
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="text-xs capitalize">
+                    {item.source} • {item.sourceId}
+                  </Badge>
+                </div>
+
+                {/* Prepare Action Button */}
+                {showPrepareButton && (
+                  <div className="mt-3">
+                    {isCompleted ? (
+                      <Badge variant="secondary" className="text-xs text-green-600">
+                        <Check className="w-3 h-3 mr-1" />
+                        Done
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        disabled={isPreparing}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPrepareAction(
+                            actionType,
+                            item.id,
+                            item.sourceId,
+                            { context: item.context, title: item.title, summary: item.summary }
+                          );
+                        }}
+                      >
+                        {isPreparing ? (
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        ) : (
+                          <Wand2 className="w-3 h-3 mr-1" />
+                        )}
+                        {actionType === 'email_reply' ? 'Draft Reply' : actionType === 'pr_nudge' ? 'Draft Nudge' : 'Prepare'}
+                      </Button>
+                    )}
+                  </div>
                 )}
-                <Badge variant="outline" className="text-xs capitalize">
-                  {item.source} • {item.sourceId}
-                </Badge>
               </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -116,3 +116,23 @@ export interface DashboardState {
   toolStatus: Record<string, ToolStatus>;
   isGeneratingBrief: boolean;
 }
+
+// Smart To-Do Action Types
+export interface SmartTodoAction {
+  label: string;
+  type: 'copy' | 'edit' | 'skip' | 'regenerate';
+  payload?: Record<string, any>;
+}
+
+export interface SmartTodoItem {
+  id: string;
+  briefItemId: string;
+  type: 'email_reply' | 'pr_nudge' | 'meeting_prep';
+  title: string;
+  originalContent?: Record<string, any>;
+  draftContent?: string;
+  alternativeDrafts?: string[];
+  actions: SmartTodoAction[];
+  status: 'preparing' | 'ready' | 'copied' | 'error';
+  error?: string;
+}

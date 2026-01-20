@@ -300,3 +300,24 @@ export async function getEmailsNeedingResponse(userId: string): Promise<EmailMes
     return isToMe && isNotFromMe && hasQuestionIndicators;
   });
 }
+
+export async function getEmailById(userId: string, messageId: string): Promise<EmailMessage> {
+  const grant = await getUserGrant(userId);
+  if (!grant) {
+    throw new Error('No Nylas grant found for user');
+  }
+
+  try {
+    const nylas = getNylasClient();
+
+    const message = await nylas.messages.find({
+      identifier: grant.grantId,
+      messageId,
+    });
+
+    return transformNylasMessage(message.data);
+  } catch (error) {
+    console.error('Error fetching email by ID:', error);
+    throw new Error('Failed to fetch email');
+  }
+}

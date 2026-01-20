@@ -1,15 +1,32 @@
 'use client';
 
 import { create } from 'zustand';
-import { Brief, Todo, ToolStatus, DashboardState } from './types';
+import { Brief, Todo, ToolStatus, DashboardState, SmartTodoItem } from './types';
 import toast from 'react-hot-toast';
 
 interface DashboardStore extends DashboardState {
+  // Existing actions
   generateDailyBrief: () => Promise<void>;
   addTodo: (todo: Omit<Todo, 'id' | 'createdAt'>) => Promise<void>;
   toggleTodo: (id: string) => Promise<void>;
   updateTodo: (id: string, updates: Partial<Todo>) => Promise<void>;
   refreshToolStatus: () => Promise<void>;
+
+  // Smart Action state
+  preparingAction: SmartTodoItem | null;
+  completedActions: Set<string>;
+  isPreparingAction: boolean;
+
+  // Smart Action methods
+  prepareAction: (
+    briefItemId: string,
+    type: 'email_reply' | 'pr_nudge' | 'meeting_prep',
+    sourceId: string,
+    additionalData?: Record<string, any>
+  ) => Promise<void>;
+  markActionComplete: (briefItemId: string) => void;
+  clearPreparedAction: () => void;
+  updatePreparedActionDraft: (newDraft: string) => void;
 }
 
 // No mock data - use only real data
@@ -19,6 +36,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   todos: [],
   toolStatus: {},
   isGeneratingBrief: false,
+  preparingAction: null,
+  completedActions: new Set<string>(),
+  isPreparingAction: false,
 
   generateDailyBrief: async () => {
     set({ isGeneratingBrief: true });
@@ -173,6 +193,71 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     } catch (error) {
       console.error('Error refreshing tool status:', error);
     }
+  },
+
+  prepareAction: async (briefItemId, type, sourceId, additionalData) => {
+    set({ isPreparingAction: true });
+
+    try {
+      const brief = get().brief;
+
+      const response = await fetch('/api/brief/prepare-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          briefItemId,
+          type,
+          sourceId,
+          userId: 'user-1', // TODO: Get from auth context
+          briefContext: brief,
+          additionalData,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to prepare action');
+      }
+
+      const data = await response.json();
+      const action = data.action as SmartTodoItem;
+
+      set({
+        preparingAction: action,
+        isPreparingAction: false,
+      });
+
+      if (action.status === 'error') {
+        toast.error(action.error || 'Failed to prepare action');
+      }
+    } catch (error) {
+      console.error('Error preparing action:', error);
+      toast.error('Failed to prepare action. Please try again.');
+      set({ isPreparingAction: false });
+    }
+  },
+
+  markActionComplete: (briefItemId) => {
+    set(state => {
+      const newCompleted = new Set(state.completedActions);
+      newCompleted.add(briefItemId);
+      return { completedActions: newCompleted };
+    });
+  },
+
+  clearPreparedAction: () => {
+    set({ preparingAction: null });
+  },
+
+  updatePreparedActionDraft: (newDraft) => {
+    set(state => {
+      if (!state.preparingAction) return state;
+      return {
+        preparingAction: {
+          ...state.preparingAction,
+          draftContent: newDraft,
+        },
+      };
+    });
   },
 }));
 

@@ -89,8 +89,32 @@ ANALYSIS GUIDELINES:
 5. Jira Tasks: What's in progress? What's blocked? What's due soon?
 6. Focus Recommendation: Based on all data, what should be the top 3 priorities?
 
-OUTPUT FORMAT:
-Return a JSON object matching the BriefOutput schema.`;
+OUTPUT FORMAT - Return ONLY this exact JSON structure:
+{
+  "generatedAt": "ISO timestamp",
+  "topFocus": [
+    {"rank": 1, "title": "string", "reason": "string", "relatedItemId": "string"}
+  ],
+  "meetings": [
+    {"id": "string", "title": "string", "time": "10:00 AM - 11:00 AM", "attendees": ["email"], "prepNeeded": "optional string"}
+  ],
+  "prsToReview": [
+    {"id": "pr-123", "source": "github", "sourceId": "123", "title": "PR title", "summary": "why review needed", "priority": "high|medium|low|critical", "actionNeeded": true, "actionType": "review"}
+  ],
+  "myPrsWaiting": [
+    {"id": "pr-456", "source": "github", "sourceId": "456", "title": "PR title", "summary": "who is blocking", "priority": "high|medium|low", "actionNeeded": true, "actionType": "investigate"}
+  ],
+  "emailsToActOn": [
+    {"id": "email-id", "source": "email", "sourceId": "email-id", "title": "Subject line", "summary": "why action needed", "priority": "critical|high|medium|low", "actionNeeded": true, "actionType": "respond|investigate"}
+  ],
+  "jiraTasks": [
+    {"id": "PROJ-123", "source": "jira", "sourceId": "PROJ-123", "title": "Task title", "summary": "status and context", "priority": "high|medium|low", "actionNeeded": true, "actionType": "complete", "deadline": "optional"}
+  ],
+  "alerts": [
+    {"type": "production_error|outage|deadline|blocker", "title": "string", "description": "string", "sourceId": "string"}
+  ],
+  "summary": "1-2 sentence overview of the day"
+}`;
 
 export async function processBriefWithClaude(toolData: ToolData, userContext?: any): Promise<Brief> {
   const condensedContext = buildCondensedBriefContext(toolData);
