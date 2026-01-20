@@ -4,11 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronRight, Target, Calendar, Eye, Mail, AlertTriangle, Sparkles, Clock, Users, ClipboardCheck, Wand2, Loader2, Check } from 'lucide-react';
+import { ChevronDown, ChevronRight, Target, Calendar, Eye, Mail, AlertTriangle, Sparkles, Clock, Users, ClipboardCheck, ArrowRight } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Brief, BriefAlert, BriefListItem, MeetingItem } from '@/lib/types';
 import { useDashboardStore } from '@/lib/store';
-import { SmartActionModal } from './smart-action-modal';
 
 interface BriefSectionProps {
   brief: Brief | null;
@@ -39,14 +38,8 @@ const sectionColors = {
 
 export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const [actionModalOpen, setActionModalOpen] = useState(false);
 
-  const {
-    prepareAction,
-    isPreparingAction,
-    completedActions,
-    preparingAction,
-  } = useDashboardStore();
+  const { smartTodos, toggleTodoExpanded } = useDashboardStore();
 
   const toggleSection = (sectionId: string) => {
     const newExpanded = new Set(expandedSections);
@@ -58,14 +51,32 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
     setExpandedSections(newExpanded);
   };
 
-  const handlePrepareAction = async (
-    type: 'email_reply' | 'pr_nudge' | 'meeting_prep',
-    briefItemId: string,
-    sourceId: string,
-    additionalData?: Record<string, any>
-  ) => {
-    setActionModalOpen(true);
-    await prepareAction(briefItemId, type, sourceId, additionalData);
+  // Helper to find corresponding smart todo for an item
+  const findSmartTodo = (briefItemId: string) => {
+    return smartTodos.find(t => t.briefItemId === briefItemId);
+  };
+
+  // Helper to scroll to and expand todo
+  const scrollToTodo = (briefItemId: string) => {
+    const todo = findSmartTodo(briefItemId);
+    if (todo) {
+      // Expand the todo
+      toggleTodoExpanded(todo.id);
+
+      // Scroll to the todo section after a short delay to allow DOM update
+      setTimeout(() => {
+        const todoElement = document.getElementById(`smart-todo-${todo.id}`);
+        if (todoElement) {
+          todoElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          // Fallback: scroll to the todo section
+          const todoSection = document.querySelector('[data-todo-section]');
+          if (todoSection) {
+            todoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }
+      }, 100);
+    }
   };
 
   const sections = useMemo(() => {
@@ -110,7 +121,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         color: sectionColors.meetings,
         count: brief.meetings?.length || 0,
         items: brief.meetings || [],
-        actionType: 'meeting_prep' as const,
+        hasAIAction: true,
       },
       {
         id: 'prsToReview',
@@ -119,7 +130,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         color: sectionColors.prsToReview,
         count: brief.prsToReview?.length || 0,
         items: brief.prsToReview || [],
-        actionType: null,
+        hasAIAction: false,
       },
       {
         id: 'myPrsWaiting',
@@ -128,7 +139,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         color: sectionColors.myPrsWaiting,
         count: brief.myPrsWaiting?.length || 0,
         items: brief.myPrsWaiting || [],
-        actionType: 'pr_nudge' as const,
+        hasAIAction: true,
       },
       {
         id: 'emails',
@@ -137,7 +148,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         color: sectionColors.emails,
         count: brief.emailsToActOn?.length || 0,
         items: brief.emailsToActOn || [],
-        actionType: 'email_reply' as const,
+        hasAIAction: true,
       },
       {
         id: 'jira',
@@ -146,7 +157,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         color: sectionColors.jira,
         count: brief.jiraTasks?.length || 0,
         items: brief.jiraTasks || [],
-        actionType: null,
+        hasAIAction: false,
       },
       {
         id: 'alerts',
@@ -155,7 +166,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         color: sectionColors.alerts,
         count: brief.alerts?.length || 0,
         alerts: brief.alerts || [],
-        actionType: null,
+        hasAIAction: false,
       },
       {
         id: 'notes',
@@ -164,7 +175,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         color: sectionColors.notes,
         count: legacyItems.length,
         legacyItems,
-        actionType: null,
+        hasAIAction: false,
       }
     ];
   }, [brief]);
@@ -266,9 +277,8 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
             if (section.id === 'meetings' && 'items' in section) {
               return renderMeetings(
                 section.items as MeetingItem[],
-                handlePrepareAction,
-                isPreparingAction,
-                completedActions
+                findSmartTodo,
+                scrollToTodo
               );
             }
             if (section.id === 'alerts' && 'alerts' in section) {
@@ -290,17 +300,15 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
                 </div>
               ) : null;
             }
-            if ('items' in section && section.actionType) {
-              return renderBriefItems(
+            if ('items' in section && section.hasAIAction) {
+              return renderBriefItemsWithTodoLink(
                 section.items as BriefListItem[],
-                section.actionType,
-                handlePrepareAction,
-                isPreparingAction,
-                completedActions
+                findSmartTodo,
+                scrollToTodo
               );
             }
             if ('items' in section) {
-              return renderBriefItems(section.items as BriefListItem[], null, handlePrepareAction, isPreparingAction, completedActions);
+              return renderBriefItems(section.items as BriefListItem[]);
             }
             return null;
           };
@@ -346,34 +354,25 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
           <div className="text-sm text-slate-500 dark:text-slate-400">No brief items found for today.</div>
         )}
       </CardContent>
-
-      <SmartActionModal
-        open={actionModalOpen}
-        onClose={() => setActionModalOpen(false)}
-      />
     </Card>
   );
 }
 
-type PrepareActionHandler = (
-  type: 'email_reply' | 'pr_nudge' | 'meeting_prep',
-  briefItemId: string,
-  sourceId: string,
-  additionalData?: Record<string, any>
-) => void;
+type FindSmartTodoFn = (briefItemId: string) => { id: string; status: string } | undefined;
+type ScrollToTodoFn = (briefItemId: string) => void;
 
 function renderMeetings(
   meetings: MeetingItem[],
-  onPrepareAction: PrepareActionHandler,
-  isPreparing: boolean,
-  completedActions: Set<string>
+  findSmartTodo: FindSmartTodoFn,
+  scrollToTodo: ScrollToTodoFn
 ) {
   if (meetings.length === 0) return null;
 
   return (
     <div className="space-y-3">
       {meetings.map(meeting => {
-        const isCompleted = completedActions.has(meeting.id);
+        const smartTodo = findSmartTodo(meeting.id);
+        const hasTodo = !!smartTodo;
 
         return (
           <div key={meeting.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-blue-200 dark:border-blue-800">
@@ -395,32 +394,16 @@ function renderMeetings(
                 {meeting.attendees.slice(0, 4).join(', ')}{meeting.attendees.length > 4 ? '...' : ''}
               </div>
             )}
-            <div className="mt-3 flex items-center gap-2">
-              {isCompleted ? (
-                <Badge variant="secondary" className="text-xs text-green-600">
-                  <Check className="w-3 h-3 mr-1" />
-                  Done
-                </Badge>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  disabled={isPreparing}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPrepareAction('meeting_prep', meeting.id, meeting.id);
-                  }}
-                >
-                  {isPreparing ? (
-                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                  ) : (
-                    <Wand2 className="w-3 h-3 mr-1" />
-                  )}
-                  Prepare
-                </Button>
-              )}
-            </div>
+            {/* Link to Todo */}
+            {hasTodo && (
+              <button
+                onClick={() => scrollToTodo(meeting.id)}
+                className="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 flex items-center gap-1 transition-colors"
+              >
+                <ArrowRight className="w-3 h-3" />
+                View in Todos
+              </button>
+            )}
           </div>
         );
       })}
@@ -428,20 +411,18 @@ function renderMeetings(
   );
 }
 
-function renderBriefItems(
+function renderBriefItemsWithTodoLink(
   items: BriefListItem[],
-  actionType: 'email_reply' | 'pr_nudge' | 'meeting_prep' | null,
-  onPrepareAction: PrepareActionHandler,
-  isPreparing: boolean,
-  completedActions: Set<string>
+  findSmartTodo: FindSmartTodoFn,
+  scrollToTodo: ScrollToTodoFn
 ) {
   if (items.length === 0) return null;
 
   return (
     <div className="space-y-3">
       {items.map(item => {
-        const isCompleted = completedActions.has(item.id);
-        const showPrepareButton = actionType !== null;
+        const smartTodo = findSmartTodo(item.id);
+        const hasTodo = !!smartTodo;
 
         return (
           <div key={item.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -466,49 +447,64 @@ function renderBriefItems(
                     </Badge>
                   )}
                   <Badge variant="outline" className="text-xs capitalize">
-                    {item.source} • {item.sourceId}
+                    {item.source} - {item.sourceId}
                   </Badge>
                 </div>
 
-                {/* Prepare Action Button */}
-                {showPrepareButton && (
-                  <div className="mt-3">
-                    {isCompleted ? (
-                      <Badge variant="secondary" className="text-xs text-green-600">
-                        <Check className="w-3 h-3 mr-1" />
-                        Done
-                      </Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        disabled={isPreparing}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onPrepareAction(
-                            actionType,
-                            item.id,
-                            item.sourceId,
-                            { context: item.context, title: item.title, summary: item.summary }
-                          );
-                        }}
-                      >
-                        {isPreparing ? (
-                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                        ) : (
-                          <Wand2 className="w-3 h-3 mr-1" />
-                        )}
-                        {actionType === 'email_reply' ? 'Draft Reply' : actionType === 'pr_nudge' ? 'Draft Nudge' : 'Prepare'}
-                      </Button>
-                    )}
-                  </div>
+                {/* Link to Todo instead of inline action button */}
+                {hasTodo && (
+                  <button
+                    onClick={() => scrollToTodo(item.id)}
+                    className="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 flex items-center gap-1 transition-colors"
+                  >
+                    <ArrowRight className="w-3 h-3" />
+                    View in Todos
+                  </button>
                 )}
               </div>
             </div>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function renderBriefItems(items: BriefListItem[]) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      {items.map(item => (
+        <div key={item.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h4 className="font-medium text-sm mb-1">{item.title}</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-400">{item.summary}</p>
+              {item.context && (
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">{item.context}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <Badge variant={item.priority === 'critical' ? 'destructive' : 'secondary'} className="text-xs">
+                  {item.priority}
+                </Badge>
+                {item.actionType && (
+                  <Badge variant="outline" className="text-xs">{item.actionType}</Badge>
+                )}
+                {item.deadline && (
+                  <Badge variant="outline" className="text-xs">
+                    <Clock className="w-3 h-3 mr-1" />
+                    {item.deadline}
+                  </Badge>
+                )}
+                <Badge variant="outline" className="text-xs capitalize">
+                  {item.source} - {item.sourceId}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

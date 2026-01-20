@@ -1,5 +1,6 @@
 import { GmailDataForBrief } from './gmailData';
 import { CalendarDataForBrief } from './calendarData';
+import { Brief, SmartTodo, BriefListItem, MeetingItem } from '../types';
 
 export interface ToolData {
   jira?: any;
@@ -260,4 +261,107 @@ function extractJiraText(value: any): string {
   if (value.text) return value.text;
   if (value.content) return extractJiraText(value.content);
   return '';
+}
+
+/**
+ * Extracts AI-actionable items from a brief and creates SmartTodo items.
+ * This is called when a brief is generated to auto-populate the Smart Todo List.
+ */
+export function extractAITodosFromBrief(brief: Brief): SmartTodo[] {
+  const todos: SmartTodo[] = [];
+  const now = new Date().toISOString();
+
+  // Extract from myPrsWaiting - PRs that need nudging
+  if (brief.myPrsWaiting && brief.myPrsWaiting.length > 0) {
+    for (const pr of brief.myPrsWaiting) {
+      todos.push({
+        id: `ai-nudge-${pr.sourceId}-${Date.now()}`,
+        title: `Draft nudge for PR: ${pr.title}`,
+        type: 'ai_pr_nudge',
+        source: 'github',
+        sourceId: pr.sourceId,
+        briefItemId: pr.id,
+        status: 'pending',
+        originalContext: {
+          prNumber: pr.sourceId,
+          title: pr.title,
+          summary: pr.summary,
+          context: pr.context,
+        },
+        priority: mapPriority(pr.priority),
+        createdAt: now,
+      });
+    }
+  }
+
+  // Extract from emailsToActOn - emails that need replies
+  if (brief.emailsToActOn && brief.emailsToActOn.length > 0) {
+    for (const email of brief.emailsToActOn) {
+      todos.push({
+        id: `ai-reply-${email.sourceId}-${Date.now()}`,
+        title: `Draft reply to: ${email.title}`,
+        type: 'ai_email_reply',
+        source: 'gmail',
+        sourceId: email.sourceId,
+        briefItemId: email.id,
+        status: 'pending',
+        originalContext: {
+          emailId: email.sourceId,
+          subject: email.title,
+          summary: email.summary,
+          context: email.context,
+        },
+        priority: mapPriority(email.priority),
+        createdAt: now,
+      });
+    }
+  }
+
+  // Extract from meetings - meetings that need prep
+  if (brief.meetings && brief.meetings.length > 0) {
+    for (const meeting of brief.meetings) {
+      // Only add meeting prep if prepNeeded is indicated or there are attendees
+      if (meeting.prepNeeded || meeting.attendees.length > 0) {
+        todos.push({
+          id: `ai-prep-${meeting.id}-${Date.now()}`,
+          title: `Prepare for: ${meeting.title}`,
+          type: 'ai_meeting_prep',
+          source: 'calendar',
+          sourceId: meeting.id,
+          briefItemId: meeting.id,
+          status: 'pending',
+          originalContext: {
+            meetingId: meeting.id,
+            title: meeting.title,
+            time: meeting.time,
+            attendees: meeting.attendees,
+            prepNeeded: meeting.prepNeeded,
+            relatedItems: meeting.relatedItems,
+          },
+          priority: 'medium',
+          createdAt: now,
+        });
+      }
+    }
+  }
+
+  return todos;
+}
+
+/**
+ * Maps brief priority to SmartTodo priority
+ */
+function mapPriority(priority: string | undefined): SmartTodo['priority'] {
+  switch (priority) {
+    case 'critical':
+      return 'critical';
+    case 'high':
+      return 'high';
+    case 'medium':
+      return 'medium';
+    case 'low':
+      return 'low';
+    default:
+      return 'medium';
+  }
 }

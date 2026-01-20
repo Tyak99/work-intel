@@ -124,6 +124,7 @@ export interface SmartTodoAction {
   payload?: Record<string, any>;
 }
 
+// Legacy SmartTodoItem for backward compatibility with prepare-action API
 export interface SmartTodoItem {
   id: string;
   briefItemId: string;
@@ -135,4 +136,23 @@ export interface SmartTodoItem {
   actions: SmartTodoAction[];
   status: 'preparing' | 'ready' | 'copied' | 'error';
   error?: string;
+}
+
+// New SmartTodo interface - central place for AI-actionable items
+export type SmartTodoType = 'manual' | 'ai_email_reply' | 'ai_pr_nudge' | 'ai_meeting_prep';
+export type SmartTodoStatus = 'pending' | 'preparing' | 'ready' | 'done';
+
+export interface SmartTodo {
+  id: string;
+  title: string;
+  type: SmartTodoType;
+  source?: 'github' | 'gmail' | 'calendar' | 'manual';
+  sourceId?: string;
+  briefItemId?: string;
+  status: SmartTodoStatus;
+  draftContent?: string;
+  originalContext?: Record<string, any>;
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  createdAt: string;
+  url?: string;
 }
