@@ -1,16 +1,16 @@
-# AI-Powered Work Dashboard
+# Work Intel
 
-An intelligent work dashboard that acts as a senior engineer's personal work assistant, automatically synthesizing information from multiple tools (Jira, GitHub, Gmail, Google Calendar) to generate actionable daily tasks and priorities.
+An AI-powered work intelligence dashboard that synthesizes information from GitHub, Jira, Gmail, and Google Calendar to generate actionable daily briefs with smart AI-assisted actions.
 
 ## 🚀 Features
 
 - **AI-Powered Daily Briefs**: Generate intelligent summaries of your work across all connected tools
-- **Smart Task Management**: Automatically extract and prioritize tasks from various sources
-- **Multiple Tool Integrations**: 
+- **Smart Todo Actions**: AI drafts for PR nudges, email replies, and meeting prep - all in one place
+- **Multiple Tool Integrations**:
   - ✅ GitHub (PRs, Issues, Reviews)
-  - ✅ Jira (Tickets, Assignments)  
-  - 🚧 Gmail (Coming Soon)
-  - 🚧 Google Calendar (Coming Soon)
+  - ✅ Jira (Tickets, Assignments)
+  - ✅ Gmail (via Nylas)
+  - ✅ Google Calendar (via Nylas)
 - **Real-time Sync**: Live updates with caching for performance
 - **Beautiful UI**: Modern, responsive interface built with Tailwind CSS
 
@@ -25,9 +25,11 @@ An intelligent work dashboard that acts as a senior engineer's personal work ass
 
 **Backend:**
 - Next.js API Routes
-- Claude 3 Sonnet (Anthropic SDK)
+- Claude 3.5 Sonnet (Anthropic SDK) with Extended Thinking
 - GitHub API via @octokit/rest
 - Jira REST API
+- Nylas API (Gmail & Calendar)
+- Supabase (OAuth grant storage)
 - In-memory caching
 
 ## 📋 Prerequisites
@@ -45,8 +47,8 @@ Before you begin, ensure you have:
 ### 1. Clone and Install
 
 ```bash
-git clone <your-repo-url>
-cd project
+git clone https://github.com/Tyak99/work-intel.git
+cd work-intel
 npm install
 ```
 
@@ -164,8 +166,7 @@ The bottom status bar shows connection status for all tools:
 
 ## 🚧 Upcoming Features
 
-- **Gmail Integration**: Email analysis and task extraction
-- **Google Calendar**: Meeting prep and schedule optimization  
+- **Email Sending**: Send AI-drafted replies directly from the dashboard
 - **Team Dashboard**: Shared tasks and team insights
 - **Mobile App**: React Native companion app
 - **Advanced Analytics**: Work patterns and productivity insights
