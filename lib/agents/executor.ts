@@ -45,7 +45,7 @@ export class AgentExecutor {
       console.log(`Agent iteration ${iteration + 1}/${this.maxIterations}`);
 
       const response = await anthropic.messages.create({
-        model: 'claude-3-5-sonnet-20250106',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 8000,
         temperature: this.temperature,
         messages,

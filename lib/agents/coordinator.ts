@@ -155,93 +155,103 @@ Focus on creating an actionable, intelligent brief that goes beyond summarizatio
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const briefData = JSON.parse(jsonMatch[0]);
-        return this.formatBrief(briefData);
+        const brief = this.formatBrief(briefData);
+        if (brief.sections.length > 0) {
+          console.log('Synthesized brief has', brief.sections.length, 'sections');
+          return brief;
+        }
+        console.log('Synthesized brief had 0 sections, using fallback');
+      } else {
+        console.log('No JSON found in coordinator response, using fallback');
       }
     } catch (error) {
       console.error('Failed to parse coordinator response:', error);
     }
 
     // Fallback: create brief from raw findings
+    console.log('Creating fallback brief from findings files...');
     return await this.createFallbackBrief();
   }
 
   private async createFallbackBrief(): Promise<Brief> {
-    // Read findings directly and create a basic brief structure
-    const allFindings = await this.executor.executeAgent(
-      'Read all agent findings using read_all_findings tool',
-      ['read_all_findings']
-    );
+    // Read findings directly from tools (not via agent)
+    const { agentTools } = await import('./tools');
 
-    const correlations = await this.executor.executeAgent(
-      'Read correlations using read_correlations tool',
-      ['read_correlations']
-    );
+    const findings = await agentTools.read_all_findings(this.sessionId);
+    const correlationData = await agentTools.read_correlations(this.sessionId);
 
-    // Parse findings if possible
-    let findings: Record<string, AgentFindings> = {};
-    let correlationData: Correlation[] = [];
-
-    try {
-      const findingsMatch = allFindings.match(/\{[\s\S]*\}/);
-      if (findingsMatch) {
-        findings = JSON.parse(findingsMatch[0]);
-      }
-
-      const correlationsMatch = correlations.match(/\[[\s\S]*\]/);
-      if (correlationsMatch) {
-        correlationData = JSON.parse(correlationsMatch[0]);
-      }
-    } catch (error) {
-      console.error('Failed to parse fallback data:', error);
-    }
+    console.log('Fallback brief - findings keys:', Object.keys(findings));
+    console.log('Fallback brief - correlations count:', correlationData.length);
 
     return this.createBriefFromFindings(findings, correlationData);
   }
 
   createBriefFromFindings(
-    findings: Record<string, AgentFindings>,
+    findings: Record<string, any>,
     correlations: Correlation[]
   ): Brief {
     const sections: BriefSection[] = [];
     const allPriorityItems: BriefItem[] = [];
     const allActionItems: BriefItem[] = [];
 
-    // Collect all items from findings
+    // Collect all items from findings - handle various agent output formats
     Object.entries(findings).forEach(([agentType, agentFindings]) => {
-      // Convert priority items to brief items
-      agentFindings.priorityItems.forEach(item => {
+      if (!agentFindings) return;
+
+      // Convert priority items to brief items (handle freestyle formats)
+      const priorityItems = agentFindings.priorityItems || [];
+      priorityItems.forEach((item: any) => {
+        // Normalize from various formats agents might use
+        const id = item.id || item.email?.id || item.issue?.id || item.pr?.id || Math.random().toString(36).substr(2, 9);
+        const title = item.title || item.subject || item.email?.subject || item.issue?.title || item.type || 'Item';
+        const description = item.description || item.reason || item.action_required || item.action || item.details || '';
+        const priority = this.normalizePriority(item.priority || item.urgency);
+
         allPriorityItems.push({
-          title: item.title,
-          description: item.description,
-          priority: item.priority,
+          title,
+          description,
+          priority,
           source: agentType,
-          sourceId: item.id,
-          url: item.url,
+          sourceId: id,
+          url: item.url || item.email?.url,
           deadline: item.deadline,
           blockingImpact: item.blockingImpact,
           correlations: correlations.filter(c =>
-            c.sourceItem === item.id || c.targetItem === item.id
+            c.sourceItem === id || c.targetItem === id
           ).map(c => ({
             type: c.type,
-            relatedId: c.sourceItem === item.id ? c.targetItem : c.sourceItem,
-            relatedSource: c.sourceItem === item.id ? c.targetAgent : c.sourceAgent,
+            relatedId: c.sourceItem === id ? c.targetItem : c.sourceItem,
+            relatedSource: c.sourceItem === id ? c.targetAgent : c.sourceAgent,
             confidence: c.confidence,
             reason: c.reason
           }))
         });
       });
 
-      // Convert action items to brief items
-      agentFindings.actionItems.forEach(action => {
-        allActionItems.push({
-          title: action.title,
-          description: action.description,
-          effort: action.effort,
-          source: agentType,
-          sourceId: action.id,
-          deadline: action.urgency === 'immediate' ? 'today' :
-                   action.urgency === 'today' ? 'today' : 'this_week'
-        });
+      // Convert action items to brief items (handle strings and objects)
+      const actionItems = agentFindings.actionItems || [];
+      actionItems.forEach((action: any) => {
+        // Handle both string and object formats
+        if (typeof action === 'string') {
+          allActionItems.push({
+            title: action,
+            description: '',
+            effort: 'medium',
+            source: agentType,
+            sourceId: Math.random().toString(36).substr(2, 9),
+            deadline: 'this_week'
+          });
+        } else {
+          const id = action.id || action.email_id || Math.random().toString(36).substr(2, 9);
+          allActionItems.push({
+            title: action.title || action.action || 'Action item',
+            description: action.description || action.details || '',
+            effort: action.effort || 'medium',
+            source: agentType,
+            sourceId: id,
+            deadline: this.normalizeDeadline(action.urgency || action.deadline || action.priority)
+          });
+        }
       });
     });
 
@@ -320,13 +330,28 @@ Focus on creating an actionable, intelligent brief that goes beyond summarizatio
       });
     }
 
-    // Create overall insights
+    // Create overall insights - normalize insights to strings
+    const workPatterns = Object.values(findings).flatMap((f: any) => {
+      const insights = f.insights || [];
+      if (!Array.isArray(insights)) {
+        // Handle object-style insights
+        return Object.entries(insights)
+          .filter(([_, v]) => typeof v === 'string')
+          .map(([k, v]) => `${k}: ${v}`);
+      }
+      return insights.map((insight: any) => {
+        if (typeof insight === 'string') return insight;
+        // Handle object-style insights like {category, observation, impact}
+        return insight.observation || insight.description || insight.message || JSON.stringify(insight);
+      });
+    });
+
     const overallInsights: OverallInsights = {
       hiddenTasksFound: allActionItems.length,
       criticalCorrelations: correlations
         .filter(c => c.confidence > 0.8)
         .map(c => c.reason),
-      workPatterns: Object.values(findings).flatMap(f => f.insights),
+      workPatterns,
       recommendations: this.generateRecommendations(allPriorityItems, allActionItems, correlations)
     };
 
@@ -336,6 +361,23 @@ Focus on creating an actionable, intelligent brief that goes beyond summarizatio
       sections,
       overallInsights
     };
+  }
+
+  private normalizePriority(value: string | undefined): 'critical' | 'high' | 'medium' | 'low' {
+    if (!value) return 'medium';
+    const lower = value.toLowerCase();
+    if (lower.includes('critical') || lower === 'urgent') return 'critical';
+    if (lower.includes('high')) return 'high';
+    if (lower.includes('low')) return 'low';
+    return 'medium';
+  }
+
+  private normalizeDeadline(value: string | undefined): string {
+    if (!value) return 'this_week';
+    const lower = value.toLowerCase();
+    if (lower.includes('immediate') || lower.includes('today') || lower.includes('now')) return 'today';
+    if (lower.includes('tomorrow')) return 'tomorrow';
+    return 'this_week';
   }
 
   private generateRecommendations(

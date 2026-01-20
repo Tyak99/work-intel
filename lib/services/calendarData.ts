@@ -15,7 +15,14 @@ export interface CalendarDataForBrief {
   focusTimeBlocks: any[];
 }
 
-export async function fetchCalendarData(userId: string): Promise<CalendarDataForBrief | null> {
+export interface CalendarFetchOptions {
+  today?: boolean;
+  upcoming?: boolean;
+  needingPrep?: boolean;
+  freeBusy?: boolean;
+}
+
+export async function fetchCalendarData(userId: string, options: CalendarFetchOptions = {}): Promise<CalendarDataForBrief | null> {
   try {
     console.log(`Fetching Calendar data for user: ${userId}`);
 
@@ -30,32 +37,51 @@ export async function fetchCalendarData(userId: string): Promise<CalendarDataFor
     const tomorrowEnd = new Date(tomorrowStart);
     tomorrowEnd.setHours(23, 59, 59, 999);
 
-    const [
-      todayEvents,
-      upcomingEvents,
-      meetingsNeedingPrep,
-      freeBusySlots
-    ] = await Promise.all([
-      getTodayEvents(userId).catch(() => []),
-      getUpcomingEvents(userId, 7).catch(() => []),
-      getMeetingsNeedingPrep(userId).catch(() => []),
-      getFreeBusyTime(userId, todayStart, todayEnd).catch(() => [])
-    ]);
+    const defaultOptions = {
+      today: true,
+      upcoming: true,
+      needingPrep: true,
+      freeBusy: true
+    };
 
-    // Get tomorrow's events separately
-    const tomorrowEvents = upcomingEvents.filter(event => {
+    const opts = { ...defaultOptions, ...options };
+
+    const promises: Promise<any>[] = [];
+    const indices = { today: -1, upcoming: -1, needingPrep: -1, freeBusy: -1 };
+
+    if (opts.today) {
+      indices.today = promises.push(getTodayEvents(userId).catch(() => [])) - 1;
+    }
+    if (opts.upcoming) {
+      indices.upcoming = promises.push(getUpcomingEvents(userId, 7).catch(() => [])) - 1;
+    }
+    if (opts.needingPrep) {
+      indices.needingPrep = promises.push(getMeetingsNeedingPrep(userId).catch(() => [])) - 1;
+    }
+    if (opts.freeBusy) {
+      indices.freeBusy = promises.push(getFreeBusyTime(userId, todayStart, todayEnd).catch(() => [])) - 1;
+    }
+
+    const results = await Promise.all(promises);
+
+    const getResult = (index: number) => (index === -1 ? [] : results[index]);
+
+    const todayEvents = getResult(indices.today);
+    const upcomingEvents = getResult(indices.upcoming);
+    const meetingsNeedingPrep = getResult(indices.needingPrep);
+    const freeBusySlots = getResult(indices.freeBusy);
+
+    const tomorrowEvents = upcomingEvents.filter((event: any) => {
       const eventDate = new Date(event.startTime);
       return eventDate >= tomorrowStart && eventDate < tomorrowEnd;
     });
 
-    // Calculate focus time blocks (free time between meetings)
-    const busySlots = freeBusySlots.filter(slot => slot.status === 'busy');
-    const freeSlots = freeBusySlots.filter(slot => slot.status === 'free');
+    const busySlots = freeBusySlots.filter((slot: any) => slot.status === 'busy');
+    const freeSlots = freeBusySlots.filter((slot: any) => slot.status === 'free');
 
-    // Focus blocks are free slots longer than 30 minutes
-    const focusTimeBlocks = freeSlots.filter(slot => {
+    const focusTimeBlocks = freeSlots.filter((slot: any) => {
       const duration = slot.end.getTime() - slot.start.getTime();
-      return duration >= 30 * 60 * 1000; // 30 minutes in milliseconds
+      return duration >= 30 * 60 * 1000;
     });
 
     console.log(`Calendar data fetched: ${todayEvents.length} today, ${tomorrowEvents.length} tomorrow, ${focusTimeBlocks.length} focus blocks`);

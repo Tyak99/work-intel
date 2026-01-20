@@ -1,21 +1,36 @@
-import JiraClient from 'jira-client';
 import { cache, cacheKeys } from '../cache';
 
-// Create Jira client instance (will be recreated as needed)
-let jira: JiraClient | null = null;
-
-function getJiraClient(): JiraClient {
-  if (!jira || !process.env.JIRA_URL || !process.env.JIRA_EMAIL || !process.env.JIRA_API_TOKEN) {
-    jira = new JiraClient({
-      protocol: 'https',
-      host: process.env.JIRA_URL?.replace('https://', '').replace('http://', '') || '',
-      username: process.env.JIRA_EMAIL || '',
-      password: process.env.JIRA_API_TOKEN || '',
-      apiVersion: '2',
-      strictSSL: true
-    });
+async function searchJiraAPI(jql: string, fields: string[], maxResults: number = 50) {
+  const baseUrl = process.env.JIRA_URL?.replace(/\/$/, '');
+  const email = process.env.JIRA_EMAIL;
+  const apiToken = process.env.JIRA_API_TOKEN;
+  
+  if (!baseUrl || !email || !apiToken) {
+    throw new Error('Jira environment variables not configured');
   }
-  return jira;
+
+  const credentials = Buffer.from(`${email}:${apiToken}`).toString('base64');
+  
+  const response = await fetch(`${baseUrl}/rest/api/3/search/jql`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({
+      jql,
+      maxResults,
+      fields
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(JSON.stringify(errorData));
+  }
+
+  return await response.json();
 }
 
 export async function fetchJiraData(username?: string, userId: string = 'user-1') {
@@ -28,70 +43,69 @@ export async function fetchJiraData(username?: string, userId: string = 'user-1'
   }
 
   try {
-    const jiraClient = getJiraClient();
     const jiraUsername = username || process.env.JIRA_EMAIL?.split('@')[0];
     
-    // Get issues assigned to user
-    const assignedIssues = await jiraClient.searchJira(
-      `assignee = "${jiraUsername}" AND status != Done ORDER BY updated DESC`,
-      {
-        maxResults: 20,
-        fields: [
-          'summary',
-          'description', 
-          'status',
-          'priority',
-          'assignee',
-          'reporter',
-          'created',
-          'updated',
-          'duedate',
-          'labels',
-          'components',
-          'fixVersions',
-          'project',
-          'issuetype',
-          'comment'
-        ]
-      }
-    );
+    const assignedFields = [
+      'summary',
+      'description', 
+      'status',
+      'priority',
+      'assignee',
+      'reporter',
+      'created',
+      'updated',
+      'duedate',
+      'labels',
+      'components',
+      'fixVersions',
+      'project',
+      'issuetype',
+      'comment'
+    ];
 
-    // Get issues reported by user
-    const reportedIssues = await jiraClient.searchJira(
-      `reporter = "${jiraUsername}" AND status != Done ORDER BY updated DESC`,
-      {
-        maxResults: 10,
-        fields: [
-          'summary',
-          'description',
-          'status', 
-          'priority',
-          'assignee',
-          'created',
-          'updated',
-          'project',
-          'issuetype'
-        ]
-      }
-    );
+    const reportedFields = [
+      'summary',
+      'description',
+      'status', 
+      'priority',
+      'assignee',
+      'created',
+      'updated',
+      'project',
+      'issuetype'
+    ];
 
-    // Get recently updated issues where user is watcher or mentioned
-    const watchedIssues = await jiraClient.searchJira(
-      `watcher = "${jiraUsername}" AND updated >= -7d ORDER BY updated DESC`,
-      {
-        maxResults: 10,
-        fields: [
-          'summary',
-          'description',
-          'status',
-          'priority',
-          'assignee',
-          'updated',
-          'project',
-          'issuetype'
-        ]
-      }
-    );
+    const watchedFields = [
+      'summary',
+      'status',
+      'priority',
+      'assignee',
+      'updated',
+      'project',
+      'issuetype'
+    ];
+
+    const [assignedData, reportedData, watchedData] = await Promise.all([
+      searchJiraAPI(
+        `assignee = "${jiraUsername}" AND status != Done ORDER BY updated DESC`,
+        assignedFields,
+        20
+      ),
+      searchJiraAPI(
+        `reporter = "${jiraUsername}" AND status != Done ORDER BY updated DESC`,
+        reportedFields,
+        10
+      ),
+      searchJiraAPI(
+        `watcher = "${jiraUsername}" AND updated >= -7d ORDER BY updated DESC`,
+        watchedFields,
+        10
+      )
+    ]);
+
+    const assignedIssues = assignedData;
+    const reportedIssues = reportedData;
+    const watchedIssues = watchedData;
 
     const result = {
       assignedIssues: assignedIssues.issues.map((issue: any) => ({
@@ -173,8 +187,25 @@ export async function testJiraConnection(): Promise<boolean> {
       return false;
     }
     
-    const jiraClient = getJiraClient();
-    await jiraClient.getCurrentUser();
+    const baseUrl = process.env.JIRA_URL?.replace(/\/$/, '');
+    const email = process.env.JIRA_EMAIL;
+    const apiToken = process.env.JIRA_API_TOKEN;
+    
+    const credentials = Buffer.from(`${email}:${apiToken}`).toString('base64');
+    
+    const response = await fetch(`${baseUrl}/rest/api/3/myself`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      return false;
+    }
+
+    await response.json();
     return true;
   } catch (error) {
     console.error('Jira connection test failed:', error);
