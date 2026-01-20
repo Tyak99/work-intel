@@ -4,25 +4,26 @@ async function searchJiraAPI(jql: string, fields: string[], maxResults: number =
   const baseUrl = process.env.JIRA_URL?.replace(/\/$/, '');
   const email = process.env.JIRA_EMAIL;
   const apiToken = process.env.JIRA_API_TOKEN;
-  
+
   if (!baseUrl || !email || !apiToken) {
     throw new Error('Jira environment variables not configured');
   }
 
   const credentials = Buffer.from(`${email}:${apiToken}`).toString('base64');
-  
-  const response = await fetch(`${baseUrl}/rest/api/3/search/jql`, {
-    method: 'POST',
+
+  // Use GET endpoint as the POST endpoint has a different format in the new API
+  const params = new URLSearchParams({
+    jql,
+    maxResults: String(maxResults),
+    fields: fields.join(',')
+  });
+
+  const response = await fetch(`${baseUrl}/rest/api/3/search/jql?${params}`, {
+    method: 'GET',
     headers: {
       'Authorization': `Basic ${credentials}`,
-      'Content-Type': 'application/json',
       'Accept': 'application/json'
-    },
-    body: JSON.stringify({
-      jql,
-      maxResults,
-      fields
-    })
+    }
   });
 
   if (!response.ok) {
@@ -85,19 +86,20 @@ export async function fetchJiraData(username?: string, userId: string = 'user-1'
       'issuetype'
     ];
 
+    // Use currentUser() function which works reliably with the authenticated user
     const [assignedData, reportedData, watchedData] = await Promise.all([
       searchJiraAPI(
-        `assignee = "${jiraUsername}" AND status != Done ORDER BY updated DESC`,
+        `assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC`,
         assignedFields,
         20
       ),
       searchJiraAPI(
-        `reporter = "${jiraUsername}" AND status != Done ORDER BY updated DESC`,
+        `reporter = currentUser() AND statusCategory != Done ORDER BY updated DESC`,
         reportedFields,
         10
       ),
       searchJiraAPI(
-        `watcher = "${jiraUsername}" AND updated >= -7d ORDER BY updated DESC`,
+        `watcher = currentUser() AND updated >= -7d ORDER BY updated DESC`,
         watchedFields,
         10
       )
