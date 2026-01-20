@@ -377,7 +377,20 @@ function renderMeetings(
         return (
           <div key={meeting.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium text-sm">{meeting.title}</h4>
+              <h4 className="font-medium text-sm">
+                {meeting.url ? (
+                  <a
+                    href={meeting.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline hover:text-primary transition-colors"
+                  >
+                    {meeting.title}
+                  </a>
+                ) : (
+                  meeting.title
+                )}
+              </h4>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-xs">
                   <Clock className="w-3 h-3 mr-1" />
@@ -428,7 +441,20 @@ function renderBriefItemsWithTodoLink(
           <div key={item.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h4 className="font-medium text-sm mb-1">{item.title}</h4>
+                <h4 className="font-medium text-sm mb-1">
+                  {item.url ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline hover:text-primary transition-colors"
+                    >
+                      {item.title}
+                    </a>
+                  ) : (
+                    item.title
+                  )}
+                </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400">{item.summary}</p>
                 {item.context && (
                   <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">{item.context}</p>
@@ -479,7 +505,20 @@ function renderBriefItems(items: BriefListItem[]) {
         <div key={item.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h4 className="font-medium text-sm mb-1">{item.title}</h4>
+              <h4 className="font-medium text-sm mb-1">
+                {item.url ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:underline hover:text-primary transition-colors"
+                  >
+                    {item.title}
+                  </a>
+                ) : (
+                  item.title
+                )}
+              </h4>
               <p className="text-xs text-slate-600 dark:text-slate-400">{item.summary}</p>
               {item.context && (
                 <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">{item.context}</p>

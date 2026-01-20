@@ -53,6 +53,7 @@ export interface BriefListItem {
   actionType?: 'respond' | 'review' | 'attend' | 'complete' | 'investigate';
   deadline?: string;
   context?: string;
+  url?: string;
 }
 
 export interface MeetingItem {
@@ -62,6 +63,7 @@ export interface MeetingItem {
   attendees: string[];
   prepNeeded?: string;
   relatedItems?: string[];
+  url?: string;
 }
 
 export interface BriefAlert {

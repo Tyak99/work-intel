@@ -34,6 +34,7 @@ export interface ProcessedPR {
   changedFiles: number;
   additions: number;
   deletions: number;
+  url?: string;
 }
 
 export interface ProcessedCalendarEvent {
@@ -45,6 +46,7 @@ export interface ProcessedCalendarEvent {
   description: string;
   isRecurring: boolean;
   meetingLink?: string;
+  url?: string;
 }
 
 export interface ProcessedJiraTask {
@@ -57,6 +59,7 @@ export interface ProcessedJiraTask {
   dueDate?: string;
   description: string;
   labels: string[];
+  url?: string;
 }
 
 const MAX_EMAILS = 15;
@@ -180,7 +183,8 @@ function processPullRequests(githubData: any | null): ProcessedPR[] {
       description,
       changedFiles: pr.changed_files || 0,
       additions: pr.additions || 0,
-      deletions: pr.deletions || 0
+      deletions: pr.deletions || 0,
+      url: pr.html_url || undefined
     };
   });
 }
@@ -206,7 +210,8 @@ function processCalendarEvents(calendarData: CalendarDataForBrief | null): Proce
     attendees: (event.attendees || []).map((attendee: any) => attendee.email || attendee.name).filter(Boolean),
     description: truncate(cleanHtml(event.description || ''), MAX_EVENT_DESCRIPTION_CHARS),
     isRecurring: !!event.recurring,
-    meetingLink: event.conferenceData?.url || event.htmlLink
+    meetingLink: event.conferenceData?.url || undefined,
+    url: event.htmlLink || undefined
   }));
 }
 
@@ -215,6 +220,7 @@ function processJiraTasks(jiraData: any | null): ProcessedJiraTask[] {
 
   const assignedIssues = jiraData.assignedIssues ?? [];
 
+  const jiraUrl = process.env.JIRA_URL?.replace(/\/$/, '');
   return assignedIssues.map((issue: any) => {
     const descriptionText = extractJiraText(issue.description);
     return {
@@ -226,7 +232,8 @@ function processJiraTasks(jiraData: any | null): ProcessedJiraTask[] {
       assignee: issue.assignee || 'Unassigned',
       dueDate: issue.duedate ? new Date(issue.duedate).toISOString() : undefined,
       description: truncate(cleanHtml(descriptionText), MAX_JIRA_DESCRIPTION_CHARS),
-      labels: issue.labels || []
+      labels: issue.labels || [],
+      url: jiraUrl && issue.key ? `${jiraUrl}/browse/${issue.key}` : undefined
     };
   });
 }

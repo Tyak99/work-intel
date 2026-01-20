@@ -38,6 +38,7 @@ const BriefItemSchema = z.object({
   actionType: z.enum(['respond', 'review', 'attend', 'complete', 'investigate']).optional(),
   deadline: z.string().optional(),
   context: z.string().max(300).optional(),
+  url: z.string().optional(),
 });
 
 const FocusItemSchema = z.object({
@@ -54,6 +55,7 @@ const MeetingItemSchema = z.object({
   attendees: z.array(z.string()),
   prepNeeded: z.string().optional(),
   relatedItems: z.array(z.string()).optional(),
+  url: z.string().optional(),
 });
 
 const BriefOutputSchema = z.object({
@@ -89,6 +91,8 @@ ANALYSIS GUIDELINES:
 5. Jira Tasks: What's in progress? What's blocked? What's due soon?
 6. Focus Recommendation: Based on all data, what should be the top 3 priorities?
 
+IMPORTANT: Preserve URLs from the context data. When an item has a "url" field in the input, include it in your output.
+
 OUTPUT FORMAT - Return ONLY this exact JSON structure:
 {
   "generatedAt": "ISO timestamp",
@@ -96,19 +100,19 @@ OUTPUT FORMAT - Return ONLY this exact JSON structure:
     {"rank": 1, "title": "string", "reason": "string", "relatedItemId": "string"}
   ],
   "meetings": [
-    {"id": "string", "title": "string", "time": "10:00 AM - 11:00 AM", "attendees": ["email"], "prepNeeded": "optional string"}
+    {"id": "string", "title": "string", "time": "10:00 AM - 11:00 AM", "attendees": ["email"], "prepNeeded": "optional string", "url": "optional calendar link"}
   ],
   "prsToReview": [
-    {"id": "pr-123", "source": "github", "sourceId": "123", "title": "PR title", "summary": "why review needed", "priority": "high|medium|low|critical", "actionNeeded": true, "actionType": "review"}
+    {"id": "pr-123", "source": "github", "sourceId": "123", "title": "PR title", "summary": "why review needed", "priority": "high|medium|low|critical", "actionNeeded": true, "actionType": "review", "url": "optional PR link"}
   ],
   "myPrsWaiting": [
-    {"id": "pr-456", "source": "github", "sourceId": "456", "title": "PR title", "summary": "who is blocking", "priority": "high|medium|low", "actionNeeded": true, "actionType": "investigate"}
+    {"id": "pr-456", "source": "github", "sourceId": "456", "title": "PR title", "summary": "who is blocking", "priority": "high|medium|low", "actionNeeded": true, "actionType": "investigate", "url": "optional PR link"}
   ],
   "emailsToActOn": [
     {"id": "email-id", "source": "email", "sourceId": "email-id", "title": "Subject line", "summary": "why action needed", "priority": "critical|high|medium|low", "actionNeeded": true, "actionType": "respond|investigate"}
   ],
   "jiraTasks": [
-    {"id": "PROJ-123", "source": "jira", "sourceId": "PROJ-123", "title": "Task title", "summary": "status and context", "priority": "high|medium|low", "actionNeeded": true, "actionType": "complete", "deadline": "optional"}
+    {"id": "PROJ-123", "source": "jira", "sourceId": "PROJ-123", "title": "Task title", "summary": "status and context", "priority": "high|medium|low", "actionNeeded": true, "actionType": "complete", "deadline": "optional", "url": "optional Jira link"}
   ],
   "alerts": [
     {"type": "production_error|outage|deadline|blocker", "title": "string", "description": "string", "sourceId": "string"}
