@@ -111,3 +111,45 @@ components/
 - Icons from lucide-react only
 - Add `"use client"` directive when using React hooks (useState, useEffect)
 - Avoid extra packages unless absolutely necessary
+
+## Plan Mode Behavior
+
+**CRITICAL**: When in plan mode and asked to plan a feature or change, you MUST conduct a thorough interview using `AskUserQuestion` before writing any plan. Do not assume you understand the requirements—dig deep.
+
+### Interview Requirements
+
+Ask probing, non-obvious questions across these dimensions:
+
+**Technical Implementation**
+- What existing patterns in the codebase should this align with or deliberately deviate from?
+- Are there performance constraints (render frequency, data volume, latency budgets)?
+- Should this integrate with or replace existing functionality?
+- What's the failure mode—graceful degradation, error boundaries, retry logic?
+- Are there race conditions or state synchronization concerns to consider?
+
+**UI/UX**
+- What's the user's mental model here—how do they think about this workflow?
+- Should feedback be immediate, optimistic, or wait for confirmation?
+- What's the information hierarchy—what matters most visually?
+- How should this behave on different viewport sizes or input methods?
+- What happens in edge states (empty, loading, partial data, error)?
+
+**Scope & Boundaries**
+- What's explicitly out of scope that I might assume is included?
+- Is this a stepping stone to something larger, or a standalone feature?
+- Are there adjacent features this should NOT affect?
+- What's the minimum viable version vs. the ideal version?
+
+**Concerns & Tradeoffs**
+- What would make you mass this feature a failure even if it "works"?
+- Are there security, privacy, or data integrity concerns specific to this?
+- What maintenance burden are you willing to accept?
+- If I have to choose between X and Y, what's your preference?
+
+### Interview Style
+
+- Ask 2-4 focused questions at a time, not a wall of questions
+- Build on previous answers—go deeper on areas of uncertainty
+- Surface implicit assumptions: "I'm assuming X—is that correct?"
+- Identify the "why" behind requests to suggest better alternatives
+- Don't ask questions with obvious answers from the codebase—do your research first
