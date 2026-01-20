@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ChevronDown, ChevronRight, Target, Calendar, Eye, Mail, RotateCcw, AlertTriangle, Lightbulb, Sparkles, Link2, Clock, Zap, Users, Brain } from 'lucide-react';
-import { useState } from 'react';
-import { Brief, BriefSection as BriefSectionType } from '@/lib/types';
+import { ChevronDown, ChevronRight, Target, Calendar, Eye, Mail, AlertTriangle, Sparkles, Clock, Users, ClipboardCheck } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Brief, BriefAlert, BriefListItem, MeetingItem } from '@/lib/types';
 
 interface BriefSectionProps {
   brief: Brief | null;
@@ -14,23 +14,25 @@ interface BriefSectionProps {
 }
 
 const sectionIcons = {
-  critical: Target,
+  focus: Target,
   meetings: Calendar,
-  reviews: Eye,
+  prsToReview: Eye,
+  myPrsWaiting: ClipboardCheck,
   emails: Mail,
-  progress: RotateCcw,
-  risks: AlertTriangle,
-  observations: Lightbulb,
+  jira: ClipboardCheck,
+  alerts: AlertTriangle,
+  notes: Sparkles,
 };
 
 const sectionColors = {
-  critical: 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800',
+  focus: 'bg-rose-50 dark:bg-rose-950 border-rose-200 dark:border-rose-800',
   meetings: 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800',
-  reviews: 'bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800',
-  emails: 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800',
-  progress: 'bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800',
-  risks: 'bg-orange-50 dark:bg-orange-950 border-orange-200 dark:border-orange-800',
-  observations: 'bg-indigo-50 dark:bg-indigo-950 border-indigo-200 dark:border-indigo-800',
+  prsToReview: 'bg-indigo-50 dark:bg-indigo-950 border-indigo-200 dark:border-indigo-800',
+  myPrsWaiting: 'bg-violet-50 dark:bg-violet-950 border-violet-200 dark:border-violet-800',
+  emails: 'bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800',
+  jira: 'bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800',
+  alerts: 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800',
+  notes: 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800',
 };
 
 export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
@@ -46,10 +48,116 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
     setExpandedSections(newExpanded);
   };
 
+  const sections = useMemo(() => {
+    if (!brief) return [];
+
+    const legacyItems = (brief.sections || [])
+      .flatMap(section => section.items.map(item => ({
+        title: item.title,
+        summary: item.description,
+        priority: item.priority || 'medium',
+        sourceId: item.sourceId || section.id,
+      })));
+
+    return [
+      {
+        id: 'focus',
+        title: 'Top Focus',
+        icon: sectionIcons.focus,
+        color: sectionColors.focus,
+        count: brief.topFocus?.length || 0,
+        content: brief.topFocus && brief.topFocus.length > 0 ? (
+          <div className="space-y-3">
+            {brief.topFocus.map(item => (
+              <div key={item.rank} className="p-3 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-rose-200 dark:border-rose-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-rose-600 dark:text-rose-300">Priority {item.rank}</p>
+                    <h4 className="font-medium text-sm text-slate-900 dark:text-slate-100">{item.title}</h4>
+                  </div>
+                  <Badge variant="secondary" className="text-xs">{item.relatedItemId}</Badge>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">{item.reason}</p>
+              </div>
+            ))}
+          </div>
+        ) : null
+      },
+      {
+        id: 'meetings',
+        title: 'Meetings',
+        icon: sectionIcons.meetings,
+        color: sectionColors.meetings,
+        count: brief.meetings?.length || 0,
+        content: renderMeetings(brief.meetings || [])
+      },
+      {
+        id: 'prsToReview',
+        title: 'PRs To Review',
+        icon: sectionIcons.prsToReview,
+        color: sectionColors.prsToReview,
+        count: brief.prsToReview?.length || 0,
+        content: renderBriefItems(brief.prsToReview || [])
+      },
+      {
+        id: 'myPrsWaiting',
+        title: 'My PRs Waiting',
+        icon: sectionIcons.myPrsWaiting,
+        color: sectionColors.myPrsWaiting,
+        count: brief.myPrsWaiting?.length || 0,
+        content: renderBriefItems(brief.myPrsWaiting || [])
+      },
+      {
+        id: 'emails',
+        title: 'Emails To Act On',
+        icon: sectionIcons.emails,
+        color: sectionColors.emails,
+        count: brief.emailsToActOn?.length || 0,
+        content: renderBriefItems(brief.emailsToActOn || [])
+      },
+      {
+        id: 'jira',
+        title: 'Jira Tasks',
+        icon: sectionIcons.jira,
+        color: sectionColors.jira,
+        count: brief.jiraTasks?.length || 0,
+        content: renderBriefItems(brief.jiraTasks || [])
+      },
+      {
+        id: 'alerts',
+        title: 'Alerts',
+        icon: sectionIcons.alerts,
+        color: sectionColors.alerts,
+        count: brief.alerts?.length || 0,
+        content: renderAlerts(brief.alerts || [])
+      },
+      {
+        id: 'notes',
+        title: 'Notes',
+        icon: sectionIcons.notes,
+        color: sectionColors.notes,
+        count: legacyItems.length,
+        content: legacyItems.length > 0 ? (
+          <div className="space-y-2">
+            {legacyItems.map((item, index) => (
+              <div key={`${item.sourceId}-${index}`} className="p-3 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-sm">{item.title}</h4>
+                  <Badge variant="outline" className="text-xs">{item.priority}</Badge>
+                </div>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{item.summary}</p>
+              </div>
+            ))}
+          </div>
+        ) : null
+      }
+    ];
+  }, [brief]);
+
+  const hasContent = sections.some(section => section.count > 0 && section.content);
+
   const expandAll = () => {
-    if (brief) {
-      setExpandedSections(new Set(brief.sections.map(s => s.id)));
-    }
+    setExpandedSections(new Set(sections.filter(section => section.content).map(section => section.id)));
   };
 
   const collapseAll = () => {
@@ -114,6 +222,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
               size="sm"
               onClick={expandAll}
               className="text-xs"
+              disabled={!hasContent}
             >
               Expand All
             </Button>
@@ -122,6 +231,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
               size="sm"
               onClick={collapseAll}
               className="text-xs"
+              disabled={!hasContent}
             >
               Collapse All
             </Button>
@@ -129,12 +239,12 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {brief.sections.map((section) => {
-          const Icon = sectionIcons[section.type as keyof typeof sectionIcons] || Sparkles;
+        {sections.filter(section => section.content && section.count > 0).map((section) => {
+          const Icon = section.icon;
           const isExpanded = expandedSections.has(section.id);
-          
+
           return (
-            <div key={section.id} className={`border rounded-lg ${sectionColors[section.type as keyof typeof sectionColors] || 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800'}`}>
+            <div key={section.id} className={`border rounded-lg ${section.color}`}>
               <button
                 onClick={() => toggleSection(section.id)}
                 className="w-full p-4 flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 transition-colors rounded-lg"
@@ -142,11 +252,9 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
                 <div className="flex items-center space-x-3">
                   <Icon className="w-5 h-5" />
                   <h3 className="font-medium text-left">{section.title}</h3>
-                  {section.items.length > 0 && (
-                    <Badge variant="secondary" className="text-xs">
-                      {section.items.length}
-                    </Badge>
-                  )}
+                  <Badge variant="secondary" className="text-xs">
+                    {section.count}
+                  </Badge>
                 </div>
                 {isExpanded ? (
                   <ChevronDown className="w-4 h-4" />
@@ -154,167 +262,114 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
                   <ChevronRight className="w-4 h-4" />
                 )}
               </button>
-              
-              {isExpanded && section.items.length > 0 && (
+
+              {isExpanded && (
                 <div className="px-4 pb-4">
                   <Separator className="mb-4" />
-                  {section.sectionInsights && (
-                    <div className="mb-4 p-3 bg-blue-50/50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-start space-x-2">
-                        <Brain className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-blue-800 dark:text-blue-200">{section.sectionInsights}</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="space-y-3">
-                    {section.items.map((item, index) => (
-                      <div key={index} className="p-4 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-medium text-sm mb-2">{item.title}</h4>
-                            <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
-                              {item.description}
-                            </p>
-                            
-                            {/* Metadata row */}
-                            <div className="flex flex-wrap items-center gap-2 mb-3">
-                              {item.priority && (
-                                <Badge 
-                                  variant={item.priority === 'critical' ? 'destructive' : 'secondary'}
-                                  className="text-xs"
-                                >
-                                  {item.priority}
-                                </Badge>
-                              )}
-                              {item.effort && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Zap className="w-3 h-3 mr-1" />
-                                  {item.effort}
-                                </Badge>
-                              )}
-                              {item.deadline && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {item.deadline}
-                                </Badge>
-                              )}
-                              {item.blockingImpact && (
-                                <Badge variant="outline" className="text-xs text-orange-700 dark:text-orange-300">
-                                  <Users className="w-3 h-3 mr-1" />
-                                  Blocking: {item.blockingImpact}
-                                </Badge>
-                              )}
-                            </div>
-
-                            {/* Correlations */}
-                            {item.correlations && item.correlations.length > 0 && (
-                              <div className="mb-3">
-                                <h5 className="text-xs font-medium text-slate-700 dark:text-slate-300 mb-2 flex items-center">
-                                  <Link2 className="w-3 h-3 mr-1" />
-                                  Related Items
-                                </h5>
-                                <div className="space-y-1">
-                                  {item.correlations.map((correlation, corrIndex) => (
-                                    <div key={corrIndex} className="flex items-center space-x-2 text-xs">
-                                      <div className={`w-2 h-2 rounded-full ${
-                                        correlation.confidence > 0.8 ? 'bg-green-500' : 
-                                        correlation.confidence > 0.6 ? 'bg-yellow-500' : 'bg-gray-500'
-                                      }`} />
-                                      <span className="text-slate-600 dark:text-slate-400">
-                                        {correlation.relatedSource}: {correlation.relatedId} ({correlation.reason})
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* AI Insights */}
-                            {item.aiInsights && (
-                              <div className="p-2 bg-indigo-50/50 dark:bg-indigo-950/30 rounded border border-indigo-200 dark:border-indigo-800">
-                                <div className="flex items-start space-x-2">
-                                  <Lightbulb className="w-3 h-3 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
-                                  <p className="text-xs text-indigo-800 dark:text-indigo-200">{item.aiInsights}</p>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          {item.url && (
-                            <a 
-                              href={item.url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 ml-2"
-                            >
-                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                                <polyline points="15,3 21,3 21,9" />
-                                <line x1="10" y1="14" x2="21" y2="3" />
-                              </svg>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  {section.content}
                 </div>
               )}
             </div>
           );
         })}
-        
-        {/* Overall Insights */}
-        {brief.overallInsights && (
-          <div className="mt-6 p-4 bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 rounded-lg border border-violet-200 dark:border-violet-800">
-            <h3 className="font-medium text-sm mb-3 flex items-center text-violet-900 dark:text-violet-100">
-              <Brain className="w-4 h-4 mr-2" />
-              AI Analysis Summary
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              {brief.overallInsights.hiddenTasksFound > 0 && (
-                <div>
-                  <span className="font-medium text-violet-800 dark:text-violet-200">Hidden Tasks Discovered:</span>
-                  <p className="text-violet-700 dark:text-violet-300">{brief.overallInsights.hiddenTasksFound} action items found in comments and descriptions</p>
-                </div>
-              )}
-              
-              {brief.overallInsights.criticalCorrelations.length > 0 && (
-                <div>
-                  <span className="font-medium text-violet-800 dark:text-violet-200">Key Relationships:</span>
-                  <ul className="text-violet-700 dark:text-violet-300 mt-1 space-y-1">
-                    {brief.overallInsights.criticalCorrelations.slice(0, 3).map((correlation, index) => (
-                      <li key={index}>• {correlation}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {brief.overallInsights.workPatterns.length > 0 && (
-                <div>
-                  <span className="font-medium text-violet-800 dark:text-violet-200">Patterns Detected:</span>
-                  <ul className="text-violet-700 dark:text-violet-300 mt-1 space-y-1">
-                    {brief.overallInsights.workPatterns.slice(0, 2).map((pattern, index) => (
-                      <li key={index}>• {pattern}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {brief.overallInsights.recommendations.length > 0 && (
-                <div>
-                  <span className="font-medium text-violet-800 dark:text-violet-200">AI Recommendations:</span>
-                  <ul className="text-violet-700 dark:text-violet-300 mt-1 space-y-1">
-                    {brief.overallInsights.recommendations.slice(0, 2).map((recommendation, index) => (
-                      <li key={index}>• {recommendation}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
+
+        {brief.summary && (
+          <div className="mt-4 p-4 bg-slate-50/70 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+            <h3 className="font-medium text-sm mb-2 text-slate-900 dark:text-slate-100">Summary</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">{brief.summary}</p>
           </div>
+        )}
+
+        {!hasContent && (
+          <div className="text-sm text-slate-500 dark:text-slate-400">No brief items found for today.</div>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function renderMeetings(meetings: MeetingItem[]) {
+  if (meetings.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      {meetings.map(meeting => (
+        <div key={meeting.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-sm">{meeting.title}</h4>
+            <Badge variant="outline" className="text-xs">
+              <Clock className="w-3 h-3 mr-1" />
+              {meeting.time}
+            </Badge>
+          </div>
+          {meeting.prepNeeded && (
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">Prep: {meeting.prepNeeded}</p>
+          )}
+          {meeting.attendees.length > 0 && (
+            <div className="flex items-center text-xs text-slate-600 dark:text-slate-400 mt-2">
+              <Users className="w-3 h-3 mr-1" />
+              {meeting.attendees.slice(0, 4).join(', ')}{meeting.attendees.length > 4 ? '...' : ''}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function renderBriefItems(items: BriefListItem[]) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      {items.map(item => (
+        <div key={item.id} className="p-4 bg-white/60 dark:bg-slate-900/60 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h4 className="font-medium text-sm mb-1">{item.title}</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-400">{item.summary}</p>
+              {item.context && (
+                <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">{item.context}</p>
+              )}
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <Badge variant={item.priority === 'critical' ? 'destructive' : 'secondary'} className="text-xs">
+                  {item.priority}
+                </Badge>
+                {item.actionType && (
+                  <Badge variant="outline" className="text-xs">{item.actionType}</Badge>
+                )}
+                {item.deadline && (
+                  <Badge variant="outline" className="text-xs">
+                    <Clock className="w-3 h-3 mr-1" />
+                    {item.deadline}
+                  </Badge>
+                )}
+                <Badge variant="outline" className="text-xs capitalize">
+                  {item.source} • {item.sourceId}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function renderAlerts(alerts: BriefAlert[]) {
+  if (alerts.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      {alerts.map(alert => (
+        <div key={alert.sourceId} className="p-4 bg-white/70 dark:bg-slate-900/70 rounded-lg border border-red-200 dark:border-red-800">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-sm text-red-900 dark:text-red-100">{alert.title}</h4>
+            <Badge variant="destructive" className="text-xs">{alert.type.replace('_', ' ')}</Badge>
+          </div>
+          <p className="text-xs text-red-800 dark:text-red-200 mt-2">{alert.description}</p>
+        </div>
+      ))}
+    </div>
   );
 }

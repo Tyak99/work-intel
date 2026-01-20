@@ -20,6 +20,7 @@ const sourceIcons = {
   jira: Mail,
   github: Github,
   email: Mail,
+  gmail: Mail,
   calendar: Calendar,
   manual: Plus,
   'ai-discovered': Brain,

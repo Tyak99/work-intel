@@ -38,27 +38,26 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       const data = await response.json();
       const generatedBrief = data.brief;
       
-      // Extract tasks from brief and add to todos with enhanced metadata
-      const extractedTodos = generatedBrief.sections.flatMap((section: any) =>
-        section.items
-          .filter((item: any) => item.priority === 'critical' || item.priority === 'high' || item.source === 'ai-discovered')
-          .map((item: any) => ({
-            id: Math.random().toString(36).substr(2, 9),
-            title: item.title,
-            description: item.description,
-            completed: false,
-            priority: item.priority || 'medium' as const,
-            source: (item.source as Todo['source']) || 'manual' as const,
-            sourceId: item.sourceId,
-            url: item.url,
-            correlations: item.correlations,
-            blockingImpact: item.blockingImpact,
-            deadline: item.deadline,
-            effort: item.effort,
-            aiInsights: item.aiInsights,
-            createdAt: new Date(),
-          }))
-      );
+      const briefItems = [
+        ...(generatedBrief.prsToReview || []),
+        ...(generatedBrief.myPrsWaiting || []),
+        ...(generatedBrief.emailsToActOn || []),
+        ...(generatedBrief.jiraTasks || []),
+      ];
+
+      const extractedTodos = briefItems
+        .filter((item: any) => item.actionNeeded && (item.priority === 'critical' || item.priority === 'high'))
+        .map((item: any) => ({
+          id: Math.random().toString(36).substr(2, 9),
+          title: item.title,
+          description: [item.summary, item.context].filter(Boolean).join(' - '),
+          completed: false,
+          priority: item.priority || 'medium',
+          source: item.source as Todo['source'],
+          sourceId: item.sourceId,
+          deadline: item.deadline,
+          createdAt: new Date(),
+        }));
 
       const currentTodos = get().todos;
       const newTodos = [...currentTodos, ...extractedTodos];
@@ -69,7 +68,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         isGeneratingBrief: false 
       });
       
-      toast.success(`Generated brief with ${generatedBrief.sections.length} sections and ${extractedTodos.length} new tasks!`);
+      toast.success(`Generated brief with ${briefItems.length} items and ${extractedTodos.length} new tasks!`);
     } catch (error) {
       console.error('Error generating daily brief:', error);
       toast.error('Failed to generate brief. Please check your connections and try again.');

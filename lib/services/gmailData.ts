@@ -42,10 +42,10 @@ export async function fetchGmailData(userId: string, options: GmailFetchOptions 
     const indices = { recent: -1, unread: -1, important: -1, today: -1, needingResponse: -1 };
 
     if (opts.recent) {
-      indices.recent = promises.push(getRecentEmails(userId, 3).catch(() => [])) - 1;
+      indices.recent = promises.push(getRecentEmails(userId, 15).catch(() => [])) - 1;
     }
     if (opts.unread) {
-      indices.unread = promises.push(getUnreadEmails(userId, 5).catch(() => [])) - 1;
+      indices.unread = promises.push(getUnreadEmails(userId, 15).catch(() => [])) - 1;
     }
     if (opts.important) {
       indices.important = promises.push(getImportantEmails(userId, 10).catch(() => [])) - 1;

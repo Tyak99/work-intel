@@ -1,4 +1,4 @@
-import { Todo } from '@/lib/types';
+import { Brief, Todo } from '@/lib/types';
 
 // In-memory storage for tasks (replace with database later)
 const userTasks: Record<string, Todo[]> = {};
@@ -59,26 +59,30 @@ export async function deleteTask(userId: string, taskId: string): Promise<boolea
   return true;
 }
 
-export async function createTasksFromBrief(userId: string, briefSections: any[]): Promise<Todo[]> {
+export async function createTasksFromBrief(userId: string, brief: Brief): Promise<Todo[]> {
   const tasks: Todo[] = [];
-  
-  for (const section of briefSections) {
-    for (const item of section.items) {
-      if (item.priority === 'critical' || item.priority === 'high') {
-        const task: Todo = {
-          id: Math.random().toString(36).substr(2, 9),
-          title: item.title,
-          description: item.description,
-          completed: false,
-          priority: item.priority,
-          source: item.source || 'manual',
-          sourceId: item.sourceId,
-          url: item.url,
-          createdAt: new Date(),
-        };
-        
-        tasks.push(task);
-      }
+
+  const briefItems = [
+    ...(brief.prsToReview || []),
+    ...(brief.myPrsWaiting || []),
+    ...(brief.emailsToActOn || []),
+    ...(brief.jiraTasks || []),
+  ];
+
+  for (const item of briefItems) {
+    if (item.actionNeeded && (item.priority === 'critical' || item.priority === 'high')) {
+      const task: Todo = {
+        id: Math.random().toString(36).substr(2, 9),
+        title: item.title,
+        description: [item.summary, item.context].filter(Boolean).join(' - '),
+        completed: false,
+        priority: item.priority,
+        source: item.source,
+        sourceId: item.sourceId,
+        createdAt: new Date(),
+      };
+
+      tasks.push(task);
     }
   }
   

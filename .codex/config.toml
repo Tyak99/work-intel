@@ -1,0 +1,14 @@
+# Project-level Codex configuration
+# Maximum permissions for this workspace
+
+# Trust this project
+trust_level = "trusted"
+
+# Auto-run commands, only prompt on failure
+approval_policy = "on-failure"
+
+# Full filesystem and network access
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = true

@@ -69,6 +69,10 @@ export async function fetchGitHubData(username?: string, userId: string = 'user-
     }
 
     const result = {
+      currentUser: {
+        login: actualUsername,
+        avatar_url: authenticatedUser.data.avatar_url
+      },
       pullRequests: pullRequests.data.items.map(pr => ({
         id: pr.id,
         number: pr.number,
