@@ -6,15 +6,98 @@ import { processBriefWithClaude } from './claude';
 import { Brief } from '@/lib/types';
 import { cache, cacheKeys } from '../cache';
 import { getUserGrant } from './nylas';
+import { supabase } from '../supabase';
+
+/**
+ * Save a brief to the database
+ */
+export async function saveBriefToDatabase(userId: string, brief: Brief): Promise<void> {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+  const { error } = await supabase
+    .from('briefs')
+    .upsert({
+      user_id: userId,
+      brief_date: today,
+      content: brief,
+      generated_at: new Date().toISOString(),
+    }, {
+      onConflict: 'user_id,brief_date',
+    });
+
+  if (error) {
+    console.error('Error saving brief to database:', error);
+    // Don't throw - saving to DB is best-effort
+  }
+}
+
+/**
+ * Get a brief from the database
+ * @param userId - The user's ID
+ * @param date - Optional date in YYYY-MM-DD format. Defaults to today.
+ */
+export async function getBriefFromDatabase(userId: string, date?: string): Promise<Brief | null> {
+  const targetDate = date || new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('briefs')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('brief_date', targetDate)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No brief found
+      return null;
+    }
+    console.error('Error fetching brief from database:', error);
+    return null;
+  }
+
+  return data?.content as Brief;
+}
+
+/**
+ * Get brief history for a user (last 30 days)
+ */
+export async function getBriefHistory(userId: string, limit: number = 30): Promise<{ date: string; brief: Brief }[]> {
+  const { data, error } = await supabase
+    .from('briefs')
+    .select('brief_date, content')
+    .eq('user_id', userId)
+    .order('brief_date', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching brief history:', error);
+    return [];
+  }
+
+  return (data || []).map(row => ({
+    date: row.brief_date,
+    brief: row.content as Brief,
+  }));
+}
 
 export async function generateDailyBriefService(userId: string): Promise<Brief> {
   const today = new Date().toDateString();
   const cacheKey = cacheKeys.brief(userId, today);
+
+  // L1 Cache: In-memory
   const cachedBrief = cache.get<Brief>(cacheKey);
-  
   if (cachedBrief) {
-    console.log('Using cached brief for today');
+    console.log('Using L1 cached brief (memory) for today');
     return cachedBrief;
+  }
+
+  // L2 Cache: Database
+  const dbBrief = await getBriefFromDatabase(userId);
+  if (dbBrief) {
+    console.log('Using L2 cached brief (database) for today');
+    // Populate L1 cache from L2
+    cache.set(cacheKey, dbBrief, 60 * 60 * 1000); // 1 hour
+    return dbBrief;
   }
 
   try {
@@ -63,10 +146,13 @@ export async function generateDailyBriefService(userId: string): Promise<Brief> 
     const brief = await processBriefWithClaude(toolData);
 
     console.log('Successfully generated brief with', brief.sections.length, 'sections');
-    
-    // Cache the brief for 1 hour
+
+    // Save to L1 cache (memory) - 1 hour TTL
     cache.set(cacheKey, brief, 60 * 60 * 1000);
-    
+
+    // Save to L2 cache (database) - persisted
+    await saveBriefToDatabase(userId, brief);
+
     return brief;
   } catch (error) {
     console.error('Error generating daily brief:', error);

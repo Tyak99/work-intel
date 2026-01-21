@@ -124,17 +124,25 @@ export async function exchangeCodeForGrant(code: string, userId: string): Promis
     };
 
     // Save grant to Supabase
+    // Note: user_id is the legacy field, user_uuid is for the new auth system
+    // If userId looks like a UUID (from authenticated user), set user_uuid
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    const upsertData: Record<string, any> = {
+      user_id: userId,
+      grant_id: grant.grantId,
+      email: grant.email,
+      provider: grant.provider,
+      scopes: grant.scopes,
+      created_at: grant.createdAt.toISOString(),
+      last_sync: grant.lastSync?.toISOString(),
+    };
+    if (isUUID) {
+      upsertData.user_uuid = userId;
+    }
+
     const { error } = await supabase
       .from('nylas_grants')
-      .upsert({
-        user_id: userId,
-        grant_id: grant.grantId,
-        email: grant.email,
-        provider: grant.provider,
-        scopes: grant.scopes,
-        created_at: grant.createdAt.toISOString(),
-        last_sync: grant.lastSync?.toISOString()
-      });
+      .upsert(upsertData);
 
     if (error) {
       console.error('Error saving grant to database:', error);
@@ -150,15 +158,43 @@ export async function exchangeCodeForGrant(code: string, userId: string): Promis
 
 export async function getUserGrant(userId: string): Promise<NylasGrant | null> {
   try {
-    const { data, error } = await supabase
-      .from('nylas_grants')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
+    // Check if userId looks like a UUID (new auth system) or legacy user_id
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+
+    // Try to find by user_uuid first (new system), then fall back to user_id (legacy)
+    let query = supabase.from('nylas_grants').select('*');
+
+    if (isUUID) {
+      query = query.eq('user_uuid', userId);
+    } else {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
       if (error.code === 'PGRST116') {
-        // No grant found
+        // No grant found with user_uuid, try user_id as fallback
+        if (isUUID) {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('nylas_grants')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
+
+          if (fallbackError || !fallbackData) {
+            return null;
+          }
+
+          return {
+            grantId: fallbackData.grant_id,
+            email: fallbackData.email,
+            provider: fallbackData.provider,
+            scopes: fallbackData.scopes,
+            createdAt: new Date(fallbackData.created_at),
+            lastSync: fallbackData.last_sync ? new Date(fallbackData.last_sync) : undefined,
+          };
+        }
         return null;
       }
       console.error('Error fetching grant from database:', error);
@@ -171,7 +207,7 @@ export async function getUserGrant(userId: string): Promise<NylasGrant | null> {
       provider: data.provider,
       scopes: data.scopes,
       createdAt: new Date(data.created_at),
-      lastSync: data.last_sync ? new Date(data.last_sync) : undefined
+      lastSync: data.last_sync ? new Date(data.last_sync) : undefined,
     };
   } catch (error) {
     console.error('Error fetching grant:', error);
@@ -218,11 +254,17 @@ export async function revokeGrant(userId: string): Promise<void> {
       },
     });
 
-    // Delete from Supabase
-    const { error } = await supabase
-      .from('nylas_grants')
-      .delete()
-      .eq('user_id', userId);
+    // Delete from Supabase - try both user_uuid and user_id
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+
+    let deleteQuery = supabase.from('nylas_grants').delete();
+    if (isUUID) {
+      deleteQuery = deleteQuery.eq('user_uuid', userId);
+    } else {
+      deleteQuery = deleteQuery.eq('user_id', userId);
+    }
+
+    const { error } = await deleteQuery;
 
     if (error) {
       console.error('Error deleting grant from database:', error);
@@ -258,10 +300,19 @@ export async function testNylasConnection(userId: string): Promise<boolean> {
 
 export async function updateLastSync(userId: string): Promise<void> {
   try {
-    const { error } = await supabase
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+
+    let updateQuery = supabase
       .from('nylas_grants')
-      .update({ last_sync: new Date().toISOString() })
-      .eq('user_id', userId);
+      .update({ last_sync: new Date().toISOString() });
+
+    if (isUUID) {
+      updateQuery = updateQuery.eq('user_uuid', userId);
+    } else {
+      updateQuery = updateQuery.eq('user_id', userId);
+    }
+
+    const { error } = await updateQuery;
 
     if (error) {
       console.error('Error updating last sync:', error);

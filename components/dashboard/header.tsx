@@ -1,7 +1,16 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Sparkles, Settings, Brain } from 'lucide-react';
+import { Sparkles, Settings, Brain, LogOut, User } from 'lucide-react';
+import { useDashboardStore, User as UserType } from '@/lib/store';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface HeaderProps {
   onGenerateBrief: () => void;
@@ -10,6 +19,8 @@ interface HeaderProps {
 }
 
 export function Header({ onGenerateBrief, onOpenSettings, isGenerating }: HeaderProps) {
+  const { user, logout } = useDashboardStore();
+
   return (
     <header className="flex items-center justify-between">
       <div className="flex items-center space-x-3">
@@ -25,9 +36,9 @@ export function Header({ onGenerateBrief, onOpenSettings, isGenerating }: Header
           </p>
         </div>
       </div>
-      
+
       <div className="flex items-center space-x-3">
-        <Button 
+        <Button
           onClick={onGenerateBrief}
           disabled={isGenerating}
           size="lg"
@@ -45,8 +56,8 @@ export function Header({ onGenerateBrief, onOpenSettings, isGenerating }: Header
             </div>
           )}
         </Button>
-        
-        <Button 
+
+        <Button
           variant="outline"
           size="lg"
           onClick={onOpenSettings}
@@ -55,6 +66,36 @@ export function Header({ onGenerateBrief, onOpenSettings, isGenerating }: Header
           <Settings className="w-4 h-4 mr-2" />
           Settings
         </Button>
+
+        {user && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                <User className="w-4 h-4 mr-2" />
+                <span className="max-w-[120px] truncate">
+                  {user.displayName || user.email.split('@')[0]}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col">
+                  <span className="font-medium">{user.displayName || 'User'}</span>
+                  <span className="text-xs text-slate-500 truncate">{user.email}</span>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </header>
   );

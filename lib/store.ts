@@ -5,7 +5,22 @@ import { Brief, Todo, ToolStatus, DashboardState, SmartTodoItem, SmartTodo } fro
 import toast from 'react-hot-toast';
 import { extractAITodosFromBrief } from './services/briefProcessing';
 
+// User type for client-side
+export interface User {
+  id: string;
+  email: string;
+  displayName: string | null;
+}
+
 interface DashboardStore extends DashboardState {
+  // User state
+  user: User | null;
+  isLoadingUser: boolean;
+
+  // User actions
+  fetchCurrentUser: () => Promise<User | null>;
+  logout: () => Promise<void>;
+
   // Existing actions
   generateDailyBrief: () => Promise<void>;
   addTodo: (todo: Omit<Todo, 'id' | 'createdAt'>) => Promise<void>;
@@ -52,6 +67,10 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   toolStatus: {},
   isGeneratingBrief: false,
 
+  // User state
+  user: null,
+  isLoadingUser: true,
+
   // Smart Todo state
   smartTodos: [],
   expandedTodos: new Set<string>(),
@@ -62,15 +81,52 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   completedActions: new Set<string>(),
   isPreparingAction: false,
 
+  fetchCurrentUser: async () => {
+    set({ isLoadingUser: true });
+    try {
+      const response = await fetch('/api/auth/me');
+      if (response.ok) {
+        const data = await response.json();
+        set({ user: data.user, isLoadingUser: false });
+        return data.user;
+      } else {
+        set({ user: null, isLoadingUser: false });
+        return null;
+      }
+    } catch (error) {
+      console.error('Error fetching current user:', error);
+      set({ user: null, isLoadingUser: false });
+      return null;
+    }
+  },
+
+  logout: async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      set({
+        user: null,
+        brief: null,
+        todos: [],
+        smartTodos: [],
+        toolStatus: {},
+      });
+      // Redirect to login page
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast.error('Failed to logout');
+    }
+  },
+
   generateDailyBrief: async () => {
     set({ isGeneratingBrief: true });
-    
+
     try {
-      // Call the real API
+      // Call the real API - user ID comes from session cookie
       const response = await fetch('/api/brief/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: 'user-1' }) // TODO: Get from auth context
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -140,7 +196,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       const response = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: 'user-1', task: todoData })
+        credentials: 'include',
+        body: JSON.stringify({ task: todoData }),
       });
 
       if (response.ok) {
@@ -180,11 +237,11 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       await fetch('/api/tasks', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          userId: 'user-1', 
-          taskId: id, 
-          updates: { completed: updatedTodo.completed }
-        })
+        credentials: 'include',
+        body: JSON.stringify({
+          taskId: id,
+          updates: { completed: updatedTodo.completed },
+        }),
       });
     } catch (error) {
       console.error('Error toggling todo:', error);
@@ -210,7 +267,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       await fetch('/api/tasks', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: 'user-1', taskId: id, updates })
+        credentials: 'include',
+        body: JSON.stringify({ taskId: id, updates }),
       });
     } catch (error) {
       console.error('Error updating todo:', error);
@@ -220,8 +278,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
   refreshToolStatus: async () => {
     try {
-      const baseUrl = typeof window !== 'undefined' ? '' : 'http://localhost:3000';
-      const response = await fetch(`${baseUrl}/api/tools/connect?userId=user-1`);
+      const response = await fetch('/api/tools/connect', {
+        credentials: 'include',
+      });
       if (response.ok) {
         const data = await response.json();
         set({ toolStatus: data.toolStatus });
@@ -240,11 +299,11 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       const response = await fetch('/api/brief/prepare-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           briefItemId,
           type,
           sourceId,
-          userId: 'user-1', // TODO: Get from auth context
           briefContext: brief,
           additionalData,
         }),
@@ -342,11 +401,11 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       const response = await fetch('/api/brief/prepare-action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           briefItemId: todo.briefItemId || todo.id,
           type: apiType,
           sourceId: todo.sourceId || todo.id,
-          userId: 'user-1',
           briefContext: brief,
           additionalData: todo.originalContext,
         }),
@@ -439,6 +498,5 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
 }));
 
-// Initialize tool status when the store is created
-const store = useDashboardStore.getState();
-store.refreshToolStatus();
+// Note: Tool status is now refreshed after user authentication
+// See Dashboard component for initialization

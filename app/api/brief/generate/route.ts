@@ -1,27 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateDailyBriefService } from '@/lib/services/brief';
+import { getCurrentUserId } from '@/lib/services/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
-    // Handle both manual requests and cron job calls
-    let userId = 'user-1'; // Default user for cron jobs
-
-    try {
-      const body = await req.json();
-      if (body.userId) {
-        userId = body.userId;
-      }
-    } catch (jsonError) {
-      // If JSON parsing fails (e.g., for cron requests with empty body), use default userId
-      console.log('Using default userId for cron job or empty request');
-    }
-
     // Check if this is a Vercel cron request
     const cronHeader = req.headers.get('x-vercel-cron');
+
+    let userId: string | null = null;
+
     if (cronHeader) {
+      // Cron job - try to get userId from body, otherwise skip
       console.log('Processing Vercel cron job request for daily brief generation');
+      try {
+        const body = await req.json();
+        userId = body.userId;
+      } catch {
+        // No body provided - cron job without specific user
+        console.log('Cron job without specific user - skipping');
+        return NextResponse.json({
+          message: 'Cron job received but no user specified',
+          generatedBy: 'cron',
+        });
+      }
+    } else {
+      // Regular request - get user from session
+      userId = await getCurrentUserId();
+
+      if (!userId) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+    }
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID required' },
+        { status: 400 }
+      );
     }
 
     console.log(`Generating brief for userId: ${userId}`);
@@ -30,7 +50,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       brief,
       generatedBy: cronHeader ? 'cron' : 'manual',
-      userId
     });
   } catch (error) {
     console.error('Error generating daily brief:', error);
@@ -50,8 +69,9 @@ export async function GET(req: NextRequest) {
     return POST(req);
   }
 
+  // For non-cron GET requests, redirect to latest brief
   return NextResponse.json(
-    { error: 'GET method not supported for manual requests' },
+    { error: 'Use POST to generate a new brief or GET /api/brief/latest for cached brief' },
     { status: 405 }
   );
 }

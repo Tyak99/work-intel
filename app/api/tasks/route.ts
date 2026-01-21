@@ -1,23 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTask, updateTask, deleteTask, getTasks } from '@/lib/services/tasks';
+import { getCurrentUserId } from '@/lib/services/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-    const date = searchParams.get('date');
+    const userId = await getCurrentUserId();
 
     if (!userId) {
       return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
+        { error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
+    const { searchParams } = new URL(req.url);
+    const date = searchParams.get('date');
+
     const tasks = await getTasks(userId, date);
-    
+
     return NextResponse.json({ tasks });
   } catch (error) {
     console.error('Error getting tasks:', error);
@@ -30,18 +32,27 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { userId, task } = body;
+    const userId = await getCurrentUserId();
 
-    if (!userId || !task) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'userId and task are required' },
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { task } = body;
+
+    if (!task) {
+      return NextResponse.json(
+        { error: 'task is required' },
         { status: 400 }
       );
     }
 
     const newTask = await createTask(userId, task);
-    
+
     return NextResponse.json({ task: newTask });
   } catch (error) {
     console.error('Error creating task:', error);
@@ -54,18 +65,27 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { userId, taskId, updates } = body;
+    const userId = await getCurrentUserId();
 
-    if (!userId || !taskId || !updates) {
+    if (!userId) {
       return NextResponse.json(
-        { error: 'userId, taskId, and updates are required' },
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const body = await req.json();
+    const { taskId, updates } = body;
+
+    if (!taskId || !updates) {
+      return NextResponse.json(
+        { error: 'taskId and updates are required' },
         { status: 400 }
       );
     }
 
     const updatedTask = await updateTask(userId, taskId, updates);
-    
+
     return NextResponse.json({ task: updatedTask });
   } catch (error) {
     console.error('Error updating task:', error);
@@ -78,19 +98,27 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
+    const userId = await getCurrentUserId();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
     const taskId = searchParams.get('taskId');
 
-    if (!userId || !taskId) {
+    if (!taskId) {
       return NextResponse.json(
-        { error: 'userId and taskId are required' },
+        { error: 'taskId is required' },
         { status: 400 }
       );
     }
 
     await deleteTask(userId, taskId);
-    
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting task:', error);

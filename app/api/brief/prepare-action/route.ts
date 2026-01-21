@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prepareAction } from '@/lib/services/actionAgents';
 import { Brief } from '@/lib/types';
+import { getCurrentUserId } from '@/lib/services/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,21 +9,29 @@ interface PrepareActionRequest {
   briefItemId: string;
   type: 'email_reply' | 'pr_nudge' | 'meeting_prep';
   sourceId: string;
-  userId: string;
   briefContext?: Brief;
   additionalData?: Record<string, any>;
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const userId = await getCurrentUserId();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body: PrepareActionRequest = await req.json();
 
-    const { briefItemId, type, sourceId, userId, briefContext, additionalData } = body;
+    const { briefItemId, type, sourceId, briefContext, additionalData } = body;
 
     // Validate required fields
-    if (!type || !sourceId || !userId) {
+    if (!type || !sourceId) {
       return NextResponse.json(
-        { error: 'Missing required fields: type, sourceId, userId' },
+        { error: 'Missing required fields: type, sourceId' },
         { status: 400 }
       );
     }

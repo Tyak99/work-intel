@@ -1,61 +1,115 @@
 import { Brief, Todo } from '@/lib/types';
+import { supabase, TaskRow } from '../supabase';
 
-// In-memory storage for tasks (replace with database later)
-const userTasks: Record<string, Todo[]> = {};
+/**
+ * Convert a database row to a Todo object
+ */
+function taskRowToTodo(row: TaskRow): Todo {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description || '',
+    completed: row.completed,
+    priority: row.priority || 'medium',
+    source: (row.source as Todo['source']) || 'manual',
+    sourceId: row.source_id || undefined,
+    url: row.url || undefined,
+    dueDate: row.due_date ? new Date(row.due_date) : undefined,
+    createdAt: new Date(row.created_at),
+  };
+}
 
 export async function getTasks(userId: string, date?: string | null): Promise<Todo[]> {
-  const tasks = userTasks[userId] || [];
-  
+  let query = supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
   if (date) {
     const targetDate = new Date(date);
-    return tasks.filter(task => {
-      const taskDate = new Date(task.createdAt);
-      return taskDate.toDateString() === targetDate.toDateString();
-    });
+    const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0)).toISOString();
+    const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999)).toISOString();
+    query = query.gte('created_at', startOfDay).lte('created_at', endOfDay);
   }
-  
-  return tasks;
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching tasks:', error);
+    return [];
+  }
+
+  return (data || []).map(taskRowToTodo);
 }
 
 export async function createTask(userId: string, taskData: Omit<Todo, 'id' | 'createdAt'>): Promise<Todo> {
-  const newTask: Todo = {
-    ...taskData,
-    id: Math.random().toString(36).substr(2, 9),
-    createdAt: new Date(),
-  };
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert({
+      user_id: userId,
+      title: taskData.title,
+      description: taskData.description || null,
+      completed: taskData.completed || false,
+      priority: taskData.priority || 'medium',
+      source: taskData.source || 'manual',
+      source_id: taskData.sourceId || null,
+      url: taskData.url || null,
+      due_date: taskData.dueDate?.toISOString() || null,
+    })
+    .select()
+    .single();
 
-  if (!userTasks[userId]) {
-    userTasks[userId] = [];
+  if (error || !data) {
+    console.error('Error creating task:', error);
+    throw new Error('Failed to create task');
   }
-  
-  userTasks[userId].push(newTask);
-  
-  return newTask;
+
+  return taskRowToTodo(data);
 }
 
 export async function updateTask(userId: string, taskId: string, updates: Partial<Todo>): Promise<Todo | null> {
-  const tasks = userTasks[userId] || [];
-  const taskIndex = tasks.findIndex(task => task.id === taskId);
-  
-  if (taskIndex === -1) {
+  const updateData: Record<string, any> = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (updates.title !== undefined) updateData.title = updates.title;
+  if (updates.description !== undefined) updateData.description = updates.description;
+  if (updates.completed !== undefined) updateData.completed = updates.completed;
+  if (updates.priority !== undefined) updateData.priority = updates.priority;
+  if (updates.source !== undefined) updateData.source = updates.source;
+  if (updates.sourceId !== undefined) updateData.source_id = updates.sourceId;
+  if (updates.url !== undefined) updateData.url = updates.url;
+  if (updates.dueDate !== undefined) updateData.due_date = updates.dueDate?.toISOString() || null;
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .update(updateData)
+    .eq('id', taskId)
+    .eq('user_id', userId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating task:', error);
     return null;
   }
-  
-  userTasks[userId][taskIndex] = { ...tasks[taskIndex], ...updates };
-  
-  return userTasks[userId][taskIndex];
+
+  return data ? taskRowToTodo(data) : null;
 }
 
 export async function deleteTask(userId: string, taskId: string): Promise<boolean> {
-  const tasks = userTasks[userId] || [];
-  const taskIndex = tasks.findIndex(task => task.id === taskId);
-  
-  if (taskIndex === -1) {
+  const { error } = await supabase
+    .from('tasks')
+    .delete()
+    .eq('id', taskId)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error deleting task:', error);
     return false;
   }
-  
-  userTasks[userId].splice(taskIndex, 1);
-  
+
   return true;
 }
 
@@ -71,27 +125,22 @@ export async function createTasksFromBrief(userId: string, brief: Brief): Promis
 
   for (const item of briefItems) {
     if (item.actionNeeded && (item.priority === 'critical' || item.priority === 'high')) {
-      const task: Todo = {
-        id: Math.random().toString(36).substr(2, 9),
-        title: item.title,
-        description: [item.summary, item.context].filter(Boolean).join(' - '),
-        completed: false,
-        priority: item.priority,
-        source: item.source,
-        sourceId: item.sourceId,
-        createdAt: new Date(),
-      };
-
-      tasks.push(task);
+      try {
+        const task = await createTask(userId, {
+          title: item.title,
+          description: [item.summary, item.context].filter(Boolean).join(' - '),
+          completed: false,
+          priority: item.priority,
+          source: item.source,
+          sourceId: item.sourceId,
+          url: item.url,
+        });
+        tasks.push(task);
+      } catch (error) {
+        console.error('Error creating task from brief item:', error);
+      }
     }
   }
-  
-  // Add to user's task list
-  if (!userTasks[userId]) {
-    userTasks[userId] = [];
-  }
-  
-  userTasks[userId].push(...tasks);
-  
+
   return tasks;
 }

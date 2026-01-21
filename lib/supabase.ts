@@ -10,6 +10,45 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Database types for our tables
+export interface UserRow {
+  id: string;
+  email: string;
+  display_name: string | null;
+  created_at: string;
+  last_login_at: string;
+}
+
+export interface SessionRow {
+  id: string;
+  user_id: string;
+  token: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface BriefRow {
+  id: string;
+  user_id: string;
+  brief_date: string;
+  content: any; // JSONB
+  generated_at: string;
+}
+
+export interface TaskRow {
+  id: string;
+  user_id: string;
+  title: string;
+  description: string | null;
+  completed: boolean;
+  priority: 'critical' | 'high' | 'medium' | 'low' | null;
+  source: string | null;
+  source_id: string | null;
+  url: string | null;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface NylasGrantRow {
   user_id: string;
   grant_id: string;
@@ -18,6 +57,7 @@ export interface NylasGrantRow {
   scopes: string[];
   created_at: string;
   last_sync?: string;
+  user_uuid?: string;
 }
 
 export interface ToolConnectionRow {

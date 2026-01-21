@@ -29,21 +29,35 @@ npm run chrome:debug-status # Check if debug Chrome is running
 npm run chrome:stop        # Stop debug Chrome
 ```
 
+## Testing Requirements
+
+**CRITICAL**: Always test the application locally after making code changes:
+
+1. Start the dev server: `npm run dev`
+2. Verify the app loads without errors in the browser
+3. Test any modified functionality manually
+4. Check browser console and server logs for errors
+
+Do not consider a task complete until local testing confirms it works.
+
 ## Testing API Endpoints
 
-No test framework - use curl for manual testing:
+No test framework - use curl for manual testing. Note: Most endpoints now require session authentication (cookie-based).
 
 ```bash
-# Check tool connections
-curl -s "http://localhost:3004/api/tools/connect?userId=user-1" | jq
+# For authenticated endpoints, first login via browser, then use cookies
+# Or test via the browser directly
 
-# Generate a brief (takes 30-60s, involves AI agents)
-curl -X POST http://localhost:3004/api/brief/generate \
+# Check auth status
+curl -s "http://localhost:3000/api/auth/me" --cookie "work_intel_session=<token>" | jq
+
+# Generate a brief (requires auth)
+curl -X POST http://localhost:3000/api/brief/generate \
   -H "Content-Type: application/json" \
-  -d '{"userId": "user-1"}'
+  --cookie "work_intel_session=<token>"
 
-# Get latest brief
-curl -s "http://localhost:3004/api/brief/latest?userId=user-1" | jq
+# Get latest brief (requires auth)
+curl -s "http://localhost:3000/api/brief/latest" --cookie "work_intel_session=<token>" | jq
 ```
 
 ## Architecture
@@ -104,6 +118,83 @@ components/
 | Jira | `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` | `.env.local` |
 | Gmail/Calendar | Nylas OAuth (grant stored in Supabase) | Browser OAuth flow |
 | Supabase | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | `.env.local` |
+
+## Supabase Database Access
+
+Claude Code has direct access to the Supabase database via MCP (Model Context Protocol). The project ID is `dbfanoyvtufdyimlqmos`.
+
+### Available MCP Tools
+
+Use these tools for database operations instead of writing migration code manually:
+
+- `mcp__supabase__list_tables` - List all tables in a schema
+- `mcp__supabase__list_migrations` - View applied migrations
+- `mcp__supabase__apply_migration` - Apply DDL changes (CREATE, ALTER, DROP)
+- `mcp__supabase__execute_sql` - Run SELECT queries (read-only data operations)
+- `mcp__supabase__get_logs` - Debug issues with logs
+- `mcp__supabase__get_advisors` - Check for security/performance issues
+
+### Database Schema
+
+```
+users                    # User accounts (created on OAuth)
+├── id (UUID, PK)
+├── email (TEXT, UNIQUE)
+├── display_name (TEXT)
+├── created_at, last_login_at (TIMESTAMPTZ)
+
+sessions                 # Cookie-based auth sessions
+├── id (UUID, PK)
+├── user_id (UUID, FK → users)
+├── token (TEXT, UNIQUE)
+├── expires_at, created_at (TIMESTAMPTZ)
+
+briefs                   # Daily AI briefs (JSONB, 30-day retention)
+├── id (UUID, PK)
+├── user_id (UUID, FK → users)
+├── brief_date (DATE)
+├── content (JSONB)
+├── generated_at (TIMESTAMPTZ)
+├── UNIQUE(user_id, brief_date)
+
+tasks                    # Persistent todos
+├── id (UUID, PK)
+├── user_id (UUID, FK → users)
+├── title, description (TEXT)
+├── completed (BOOLEAN)
+├── priority (critical|high|medium|low)
+├── source, source_id, url (TEXT)
+├── due_date, created_at, updated_at (TIMESTAMPTZ)
+
+nylas_grants             # OAuth grants for Gmail/Calendar
+├── grant_id (TEXT, PK)
+├── user_id (TEXT) - legacy
+├── user_uuid (UUID, FK → users) - new auth system
+├── email, provider (TEXT)
+├── scopes (TEXT[])
+├── created_at, last_sync (TIMESTAMPTZ)
+```
+
+### When to Use MCP vs Code
+
+- **Use MCP tools**: Schema changes, migrations, debugging queries, checking data
+- **Use lib/supabase.ts**: Application code that reads/writes data at runtime
+
+### Database Agent
+
+For complex database operations, use the database subagent:
+
+```
+Task tool with subagent_type="database"
+```
+
+The database agent is specialized for:
+- Schema modifications and migrations
+- Data inspection and debugging
+- Security and performance checks
+- Complex SQL operations
+
+Example: "Use the database agent to add an index on the tasks table for better query performance"
 
 ## UI Guidelines
 
