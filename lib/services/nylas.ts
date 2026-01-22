@@ -54,9 +54,17 @@ export function buildAuthUrl(userId: string, state?: string): string {
 }
 
 export async function exchangeCodeForGrant(code: string, userId: string): Promise<NylasGrant> {
+  console.log('[Nylas exchangeCodeForGrant] Starting token exchange');
   try {
     const clientId = process.env.NYLAS_CLIENT_ID;
     const redirectUri = process.env.NYLAS_REDIRECT_URI || 'http://localhost:3000/api/auth/nylas/callback';
+
+    console.log('[Nylas exchangeCodeForGrant] Config:', {
+      clientId: clientId ? `${clientId.substring(0, 10)}...` : 'NOT SET',
+      redirectUri,
+      hasApiKey: !!process.env.NYLAS_API_KEY,
+      apiUri: process.env.NYLAS_API_URI || 'https://api.us.nylas.com',
+    });
 
     if (!clientId) {
       throw new Error('NYLAS_CLIENT_ID is not configured');
@@ -77,7 +85,7 @@ export async function exchangeCodeForGrant(code: string, userId: string): Promis
 
     const apiUri = process.env.NYLAS_API_URI || 'https://api.us.nylas.com';
 
-    console.log('Token exchange request:', {
+    console.log('[Nylas exchangeCodeForGrant] Token exchange request:', {
       url: `${apiUri}/v3/connect/token`,
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -93,8 +101,11 @@ export async function exchangeCodeForGrant(code: string, userId: string): Promis
       body: JSON.stringify(tokenBody),
     });
 
+    console.log('[Nylas exchangeCodeForGrant] Token response status:', response.status);
+
     if (!response.ok) {
       const error = await response.json();
+      console.error('[Nylas exchangeCodeForGrant] Token exchange failed:', error);
       throw new Error(`Failed to exchange code: ${JSON.stringify(error)}`);
     }
 
