@@ -18,6 +18,8 @@ export function Dashboard() {
     user,
     isLoadingUser,
     fetchCurrentUser,
+    fetchLatestBrief,
+    fetchTasks,
     isGeneratingBrief,
     brief,
     todos,
@@ -33,11 +35,13 @@ export function Dashboard() {
   useEffect(() => {
     fetchCurrentUser().then((user) => {
       if (user) {
-        // User is authenticated, refresh tool status
+        // User is authenticated, load existing data and refresh tool status
+        fetchLatestBrief();
+        fetchTasks();
         refreshToolStatus();
       }
     });
-  }, [fetchCurrentUser, refreshToolStatus]);
+  }, [fetchCurrentUser, fetchLatestBrief, fetchTasks, refreshToolStatus]);
 
   useEffect(() => {
     // Check for OAuth callback parameters

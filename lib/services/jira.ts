@@ -89,7 +89,7 @@ export async function fetchJiraData(username?: string, userId: string = 'user-1'
     // Use currentUser() function which works reliably with the authenticated user
     const [assignedData, reportedData, watchedData] = await Promise.all([
       searchJiraAPI(
-        `assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC`,
+        `assignee = currentUser() AND sprint in openSprints() AND statusCategory != Done ORDER BY updated DESC`,
         assignedFields,
         20
       ),

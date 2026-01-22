@@ -301,9 +301,14 @@ export function extractAITodosFromBrief(brief: Brief): SmartTodo[] {
     }
   }
 
-  // Extract from emailsToActOn - emails that need replies
+  // Extract from emailsToActOn - only emails that need replies (actionType: 'respond')
+  // Skip automated/no-reply emails which should have actionType: 'investigate' instead
   if (brief.emailsToActOn && brief.emailsToActOn.length > 0) {
     for (const email of brief.emailsToActOn) {
+      // Only create draft reply todos for emails that actually need a response
+      if (email.actionType !== 'respond') {
+        continue;
+      }
       todos.push({
         id: `ai-reply-${email.sourceId}-${Date.now()}`,
         title: `Draft reply to: ${email.title}`,

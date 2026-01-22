@@ -83,11 +83,12 @@ ANALYSIS GUIDELINES:
 1. Meetings: What's on the calendar today? Any prep needed?
 2. PRs to Review: Which PRs am I assigned to review but haven't reviewed?
 3. My PRs Waiting: Which of my PRs are waiting for review from others?
-4. Emails to Act On: Which emails need a response? Filter intelligently:
-   - AWS notifications: Only flag if service degradation/outage
-   - Sentry errors: Flag if production critical
-   - Marketing/newsletters: Skip unless explicitly subscribed
-   - Personal/team emails: Always include if needs response
+4. Emails to Act On: Which emails need attention? Filter intelligently:
+   - NO-REPLY ADDRESSES: Never suggest "respond" action for emails from no-reply@, noreply@, donotreply@, or similar automated senders. These can still be flagged with actionType "investigate" if critical (e.g., production alert), but NEVER "respond"
+   - AWS/infrastructure alerts: Flag with actionType "investigate" if service degradation/outage, but NOT "respond"
+   - Sentry errors: Flag with actionType "investigate" if production critical
+   - Marketing/newsletters: Skip entirely
+   - Personal/team emails from real people: Include with actionType "respond" if needs response
 5. Jira Tasks: What's in progress? What's blocked? What's due soon?
 6. Focus Recommendation: Based on all data, what should be the top 3 priorities?
 

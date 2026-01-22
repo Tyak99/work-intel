@@ -22,6 +22,8 @@ interface DashboardStore extends DashboardState {
   logout: () => Promise<void>;
 
   // Existing actions
+  fetchLatestBrief: () => Promise<void>;
+  fetchTasks: () => Promise<void>;
   generateDailyBrief: () => Promise<void>;
   addTodo: (todo: Omit<Todo, 'id' | 'createdAt'>) => Promise<void>;
   toggleTodo: (id: string) => Promise<void>;
@@ -115,6 +117,54 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     } catch (error) {
       console.error('Error logging out:', error);
       toast.error('Failed to logout');
+    }
+  },
+
+  fetchLatestBrief: async () => {
+    try {
+      const response = await fetch('/api/brief/latest', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        // Not an error - just no brief available
+        return;
+      }
+
+      const data = await response.json();
+      if (data.brief) {
+        // Generate AI todos from the loaded brief
+        const aiTodos = extractAITodosFromBrief(data.brief);
+
+        set({
+          brief: data.brief,
+          smartTodos: aiTodos,
+        });
+        console.log(`Loaded brief from ${data.source || 'cache'}`);
+      }
+    } catch (error) {
+      console.error('Error fetching latest brief:', error);
+      // Silent fail - user can generate a new one
+    }
+  },
+
+  fetchTasks: async () => {
+    try {
+      const response = await fetch('/api/tasks', {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      if (data.tasks) {
+        set({ todos: data.tasks });
+        console.log(`Loaded ${data.tasks.length} tasks`);
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
     }
   },
 
