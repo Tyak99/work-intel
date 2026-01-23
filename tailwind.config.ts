@@ -2,6 +2,10 @@ import type { Config } from 'tailwindcss';
 
 const config: Config = {
   darkMode: ['class'],
+  safelist: [
+    'theme-future',
+    'theme-original',
+  ],
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -11,8 +15,8 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ['var(--font-inter)', 'sans-serif'],
-        display: ['var(--font-rajdhani)', 'sans-serif'],
-        mono: ['var(--font-jetbrains-mono)', 'monospace'],
+        display: ['var(--font-display)', 'sans-serif'],
+        mono: ['var(--font-mono)', 'monospace'],
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -20,52 +24,52 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       colors: {
-        // Semantic color system for "Work Intel Mission Control"
-        background: 'hsl(222, 47%, 4%)', // #030712
-        foreground: 'hsl(210, 40%, 98%)', // #f8fafc
+        // Semantic color system mapped to CSS variables
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         
         card: {
-          DEFAULT: 'hsl(222, 47%, 7%)', // Slightly lighter than bg
-          foreground: 'hsl(210, 40%, 98%)',
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
         },
         popover: {
-          DEFAULT: 'hsl(222, 47%, 6%)',
-          foreground: 'hsl(210, 40%, 98%)',
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
         },
         primary: {
-          DEFAULT: 'hsl(189, 94%, 43%)', // Cyan-500 #06b6d4
-          foreground: 'hsl(222, 47%, 4%)',
-          glow: 'hsl(189, 94%, 43%)',
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
+          glow: 'hsl(var(--primary))',
         },
         secondary: {
-          DEFAULT: 'hsl(226, 71%, 40%)', // Indigo-600 #4f46e5
-          foreground: 'hsl(210, 40%, 98%)',
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
         },
         muted: {
-          DEFAULT: 'hsl(217, 33%, 17%)', // Slate-800
-          foreground: 'hsl(215, 20%, 65%)', // Slate-400
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
-          DEFAULT: 'hsl(189, 94%, 43%)',
-          foreground: 'hsl(222, 47%, 4%)',
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
         },
         destructive: {
-          DEFAULT: 'hsl(0, 84%, 60%)', // Red-500
-          foreground: 'hsl(210, 40%, 98%)',
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
         },
-        border: 'hsl(217, 33%, 17%)',
-        input: 'hsl(217, 33%, 17%)',
-        ring: 'hsl(189, 94%, 43%)',
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
         
-        // Custom neon palette
+        // Custom neon palette - preserved for future theme usage
         neon: {
-          blue: '#3b82f6',
-          cyan: '#06b6d4',
-          green: '#10b981',
-          purple: '#8b5cf6',
-          pink: '#ec4899',
-          amber: '#f59e0b',
-          red: '#ef4444',
+          blue: 'hsl(var(--neon-blue))',
+          cyan: 'hsl(var(--neon-cyan))',
+          green: 'hsl(var(--neon-green))',
+          purple: 'hsl(var(--neon-purple))',
+          pink: 'hsl(var(--neon-pink))',
+          amber: 'hsl(var(--neon-amber))',
+          red: 'hsl(var(--neon-red))',
         }
       },
       backgroundImage: {

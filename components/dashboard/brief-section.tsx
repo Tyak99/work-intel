@@ -9,6 +9,8 @@ import { useMemo, useState } from 'react';
 import { Brief, BriefAlert, BriefListItem, MeetingItem } from '@/lib/types';
 import { useDashboardStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/components/theme-provider';
+import { ThemeLabelKey } from '@/lib/theme-config';
 
 interface BriefSectionProps {
   brief: Brief | null;
@@ -80,6 +82,7 @@ const sectionStyles = {
 
 export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const { t, hasAnimations, hasGlowEffects } = useTheme();
 
   const { smartTodos, toggleTodoExpanded } = useDashboardStore();
 
@@ -135,7 +138,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
     return [
       {
         id: 'focus',
-        title: 'MISSION OBJECTIVES',
+        title: t('topFocus'),
         icon: sectionIcons.focus,
         style: sectionStyles.focus,
         count: brief.topFocus?.length || 0,
@@ -149,13 +152,13 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
                       {item.rank}
                     </span>
                     <Badge variant="outline" className="text-[10px] border-neon-pink/30 text-neon-pink bg-neon-pink/5">
-                      PRIORITY TARGET
+                      {t('priorityTarget')}
                     </Badge>
                   </div>
                   <Badge variant="secondary" className="text-[10px] font-mono">{item.relatedItemId}</Badge>
                 </div>
                 <h4 className="font-medium text-sm text-foreground group-hover:text-neon-pink transition-colors">{item.title}</h4>
-                <p className="text-xs text-muted-foreground mt-2 font-mono leading-relaxed">{item.reason}</p>
+                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{item.reason}</p>
               </div>
             ))}
           </div>
@@ -163,7 +166,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
       },
       {
         id: 'meetings',
-        title: 'SCHEDULED ENCOUNTERS',
+        title: t('meetings'),
         icon: sectionIcons.meetings,
         style: sectionStyles.meetings,
         count: brief.meetings?.length || 0,
@@ -172,7 +175,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
       },
       {
         id: 'prsToReview',
-        title: 'CODE REVIEW PENDING',
+        title: t('pendingReview'),
         icon: sectionIcons.prsToReview,
         style: sectionStyles.prsToReview,
         count: brief.prsToReview?.length || 0,
@@ -181,7 +184,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
       },
       {
         id: 'myPrsWaiting',
-        title: 'DEPLOYMENT PIPELINE',
+        title: t('myPrs'),
         icon: sectionIcons.myPrsWaiting,
         style: sectionStyles.myPrsWaiting,
         count: brief.myPrsWaiting?.length || 0,
@@ -190,7 +193,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
       },
       {
         id: 'emails',
-        title: 'COMMUNICATIONS',
+        title: t('emails'),
         icon: sectionIcons.emails,
         style: sectionStyles.emails,
         count: brief.emailsToActOn?.length || 0,
@@ -199,7 +202,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
       },
       {
         id: 'jira',
-        title: 'TICKET QUEUE',
+        title: t('jiraTasks'),
         icon: sectionIcons.jira,
         style: sectionStyles.jira,
         count: brief.jiraTasks?.length || 0,
@@ -208,7 +211,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
       },
       {
         id: 'alerts',
-        title: 'SYSTEM ALERTS',
+        title: t('alerts'),
         icon: sectionIcons.alerts,
         style: sectionStyles.alerts,
         count: brief.alerts?.length || 0,
@@ -217,7 +220,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
       },
       {
         id: 'notes',
-        title: 'FIELD NOTES',
+        title: t('notes'),
         icon: sectionIcons.notes,
         style: sectionStyles.notes,
         count: legacyItems.length,
@@ -225,7 +228,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         hasAIAction: false,
       }
     ];
-  }, [brief]);
+  }, [brief, t]);
 
   const hasContent = sections.some(section => section.count > 0);
 
@@ -240,27 +243,27 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
   if (isGenerating) {
     return (
       <Card className="glass-panel border-primary/20 shadow-glow-sm relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent animate-scan-line" />
+        {hasAnimations && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent animate-scan-line" />}
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span className="flex items-center gap-2">
               <Zap className="w-5 h-5 text-primary animate-pulse" />
-              SYSTEM ANALYSIS
+              {t('initializing')}
             </span>
-            <div className="flex items-center space-x-2 text-sm text-primary font-mono">
+            <div className="flex items-center space-x-2 text-sm text-primary">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
               </span>
-              <span>PROCESSING DATA STREAMS...</span>
+              <span>{t('generatingBrief')}</span>
             </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="animate-pulse flex flex-col gap-2">
-              <div className="h-4 w-1/3 bg-white/5 rounded" />
-              <div className="h-16 bg-white/5 rounded border border-white/5" />
+              <div className="h-4 w-1/3 bg-muted rounded" />
+              <div className="h-16 bg-muted rounded border border-border" />
             </div>
           ))}
         </CardContent>
@@ -270,19 +273,19 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
 
   if (!brief) {
     return (
-      <Card className="glass-panel border-slate-800">
+      <Card className="glass-panel border-border">
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
           <div className="relative mb-6 group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
-            <div className="relative w-24 h-24 bg-slate-950 rounded-full flex items-center justify-center border border-white/10">
+            {hasGlowEffects && <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>}
+            <div className="relative w-24 h-24 bg-card rounded-full flex items-center justify-center border border-border">
               <Sparkles className="w-10 h-10 text-primary animate-pulse" />
             </div>
           </div>
-          <h3 className="text-2xl font-display font-bold text-foreground mb-2 uppercase tracking-wide">
-            Awaiting Command
+          <h3 className="text-2xl font-display font-bold text-foreground mb-2">
+            {t('emptyBrief')}
           </h3>
-          <p className="text-muted-foreground max-w-md font-mono text-sm">
-            Initiate sequence to analyze workstreams and generate mission briefing.
+          <p className="text-muted-foreground max-w-md text-sm">
+            {t('emptyBriefSubtext')}
           </p>
         </CardContent>
       </Card>
@@ -296,7 +299,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
           <div>
             <CardTitle className="text-xl flex items-center gap-2">
               <Activity className="w-5 h-5 text-primary" />
-              MISSION BRIEFING
+              {t('briefTitle')}
             </CardTitle>
             <p className="text-xs font-mono text-primary/70 mt-1 uppercase tracking-wider">
               Generated: {new Date(brief.generatedAt).toLocaleTimeString()}
@@ -307,19 +310,19 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
               variant="ghost"
               size="sm"
               onClick={expandAll}
-              className="text-xs font-mono h-7"
+              className="text-xs h-7"
               disabled={!hasContent}
             >
-              [EXPAND ALL]
+              {t('expandAll')}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={collapseAll}
-              className="text-xs font-mono h-7"
+              className="text-xs h-7"
               disabled={!hasContent}
             >
-              [COLLAPSE ALL]
+              {t('collapseAll')}
             </Button>
           </div>
         </div>
@@ -340,7 +343,8 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
                 section.items as MeetingItem[],
                 findSmartTodo,
                 scrollToTodo,
-                style
+                style,
+                t
               );
             }
             if (section.id === 'alerts' && 'alerts' in section) {
@@ -367,7 +371,8 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
                 section.items as BriefListItem[],
                 findSmartTodo,
                 scrollToTodo,
-                style
+                style,
+                t
               );
             }
             if ('items' in section) {
@@ -417,17 +422,17 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         })}
 
         {brief.summary && (
-          <div className="mt-6 p-5 bg-gradient-to-br from-slate-900 to-black rounded-lg border border-white/10 relative overflow-hidden">
+          <div className="mt-6 p-5 bg-muted/30 rounded-lg border border-border relative overflow-hidden">
             <div className="absolute top-0 right-0 p-2 opacity-10">
               <Activity className="w-24 h-24" />
             </div>
-            <h3 className="font-display font-bold text-sm mb-3 text-primary tracking-widest uppercase">Mission Summary</h3>
-            <p className="text-sm text-slate-300 leading-relaxed font-light">{brief.summary}</p>
+            <h3 className="font-display font-semibold text-sm mb-3 text-primary">{t('missionSummary')}</h3>
+            <p className="text-sm text-muted-foreground leading-relaxed">{brief.summary}</p>
           </div>
         )}
 
         {!hasContent && (
-          <div className="text-sm text-muted-foreground text-center py-8 font-mono">NO ACTIVE DATA STREAMS DETECTED</div>
+          <div className="text-sm text-muted-foreground text-center py-8">{t('emptyBriefSubtext')}</div>
         )}
       </CardContent>
     </Card>
@@ -436,12 +441,14 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
 
 type FindSmartTodoFn = (briefItemId: string) => { id: string; status: string } | undefined;
 type ScrollToTodoFn = (briefItemId: string) => void;
+type TranslateFn = (key: ThemeLabelKey) => string;
 
 function renderMeetings(
   meetings: MeetingItem[],
   findSmartTodo: FindSmartTodoFn,
   scrollToTodo: ScrollToTodoFn,
-  style: any
+  style: any,
+  t: TranslateFn
 ) {
   if (meetings.length === 0) return null;
 
@@ -452,9 +459,9 @@ function renderMeetings(
         const hasTodo = !!smartTodo;
 
         return (
-          <div key={meeting.id} className={cn("p-4 bg-background/40 backdrop-blur-sm rounded-lg border border-white/5 transition-colors hover:border-white/20", style.glow)}>
+          <div key={meeting.id} className={cn("p-4 bg-background/40 rounded-lg border border-border transition-colors hover:border-primary/30", style.glow)}>
             <div className="flex items-center justify-between">
-              <h4 className="font-medium text-sm text-slate-200">
+              <h4 className="font-medium text-sm text-foreground">
                 {meeting.url ? (
                   <a
                     href={meeting.url}
@@ -469,7 +476,7 @@ function renderMeetings(
                 )}
               </h4>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] font-mono border-blue-500/30 text-blue-400 bg-blue-500/10">
+                <Badge variant="outline" className="text-[10px] border-blue-500/30 text-blue-500 bg-blue-500/10">
                   <Clock className="w-3 h-3 mr-1" />
                   {meeting.time}
                 </Badge>
@@ -477,12 +484,12 @@ function renderMeetings(
             </div>
             {meeting.prepNeeded && (
               <div className="mt-2 flex items-start gap-2">
-                 <Badge variant="secondary" className="text-[10px] px-1 h-5 mt-0.5 bg-blue-500/10 text-blue-400">PREP</Badge>
-                 <p className="text-xs text-slate-400">{meeting.prepNeeded}</p>
+                 <Badge variant="secondary" className="text-[10px] px-1 h-5 mt-0.5 bg-blue-500/10 text-blue-500">{t('prepNotesLabel')}</Badge>
+                 <p className="text-xs text-muted-foreground">{meeting.prepNeeded}</p>
               </div>
             )}
             {meeting.attendees.length > 0 && (
-              <div className="flex items-center text-xs text-slate-500 mt-2 font-mono">
+              <div className="flex items-center text-xs text-muted-foreground mt-2">
                 <Users className="w-3 h-3 mr-1" />
                 {meeting.attendees.slice(0, 4).join(', ')}{meeting.attendees.length > 4 ? '...' : ''}
               </div>
@@ -491,10 +498,10 @@ function renderMeetings(
             {hasTodo && (
               <button
                 onClick={() => scrollToTodo(meeting.id)}
-                className="mt-3 text-xs text-primary hover:text-primary-glow flex items-center gap-1 transition-colors uppercase tracking-wider font-bold"
+                className="mt-3 text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors font-medium"
               >
                 <ArrowRight className="w-3 h-3" />
-                Engage Protocol
+                {t('viewTodo')}
               </button>
             )}
           </div>
@@ -508,7 +515,8 @@ function renderBriefItemsWithTodoLink(
   items: BriefListItem[],
   findSmartTodo: FindSmartTodoFn,
   scrollToTodo: ScrollToTodoFn,
-  style: any
+  style: any,
+  t: TranslateFn
 ) {
   if (items.length === 0) return null;
 
@@ -519,10 +527,10 @@ function renderBriefItemsWithTodoLink(
         const hasTodo = !!smartTodo;
 
         return (
-          <div key={item.id} className={cn("p-4 bg-background/40 backdrop-blur-sm rounded-lg border border-white/5 hover:border-white/20 transition-all", style.glow)}>
+          <div key={item.id} className={cn("p-4 bg-background/40 rounded-lg border border-border hover:border-primary/30 transition-all", style.glow)}>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <h4 className="font-medium text-sm mb-1 text-slate-200">
+                <h4 className="font-medium text-sm mb-1 text-foreground">
                   {item.url ? (
                     <a
                       href={item.url}
@@ -538,25 +546,24 @@ function renderBriefItemsWithTodoLink(
                 </h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">{item.summary}</p>
                 {item.context && (
-                  <div className="mt-2 p-2 bg-black/30 rounded border border-white/5 text-[10px] font-mono text-slate-400">
-                     <span className="text-slate-500 mr-2">$</span>
+                  <div className="mt-2 p-2 bg-muted/50 rounded border border-border text-[10px] text-muted-foreground">
                      {item.context}
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-2 mt-3">
-                  <Badge variant={item.priority === 'critical' ? 'destructive' : 'secondary'} className="text-[10px] uppercase">
+                  <Badge variant={item.priority === 'critical' ? 'destructive' : 'secondary'} className="text-[10px]">
                     {item.priority}
                   </Badge>
                   {item.actionType && (
-                    <Badge variant="outline" className="text-[10px] border-white/10 text-slate-400">{item.actionType}</Badge>
+                    <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">{item.actionType}</Badge>
                   )}
                   {item.deadline && (
-                    <Badge variant="outline" className="text-[10px] border-white/10">
+                    <Badge variant="outline" className="text-[10px] border-border">
                       <Clock className="w-3 h-3 mr-1" />
                       {item.deadline}
                     </Badge>
                   )}
-                  <Badge variant="outline" className="text-[10px] capitalize border-white/10 text-slate-500">
+                  <Badge variant="outline" className="text-[10px] capitalize border-border text-muted-foreground">
                     {item.source}
                   </Badge>
                 </div>
@@ -565,10 +572,10 @@ function renderBriefItemsWithTodoLink(
                 {hasTodo && (
                   <button
                     onClick={() => scrollToTodo(item.id)}
-                    className="mt-3 text-xs text-primary hover:text-primary-glow flex items-center gap-1 transition-colors uppercase tracking-wider font-bold"
+                    className="mt-3 text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors font-medium"
                   >
                     <ArrowRight className="w-3 h-3" />
-                    Initialize Action
+                    {t('viewTodo')}
                   </button>
                 )}
               </div>
@@ -586,10 +593,10 @@ function renderBriefItems(items: BriefListItem[], style: any) {
   return (
     <div className="space-y-3">
       {items.map(item => (
-        <div key={item.id} className={cn("p-4 bg-background/40 backdrop-blur-sm rounded-lg border border-white/5 hover:border-white/20 transition-all", style.glow)}>
+        <div key={item.id} className={cn("p-4 bg-background/40 rounded-lg border border-border hover:border-primary/30 transition-all", style.glow)}>
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h4 className="font-medium text-sm mb-1 text-slate-200">
+              <h4 className="font-medium text-sm mb-1 text-foreground">
                 {item.url ? (
                   <a
                     href={item.url}
@@ -605,16 +612,16 @@ function renderBriefItems(items: BriefListItem[], style: any) {
               </h4>
               <p className="text-xs text-muted-foreground">{item.summary}</p>
               {item.context && (
-                <p className="text-xs text-slate-500 mt-2 font-mono">{item.context}</p>
+                <p className="text-xs text-muted-foreground mt-2">{item.context}</p>
               )}
               <div className="flex flex-wrap items-center gap-2 mt-3">
-                <Badge variant={item.priority === 'critical' ? 'destructive' : 'secondary'} className="text-[10px] uppercase">
+                <Badge variant={item.priority === 'critical' ? 'destructive' : 'secondary'} className="text-[10px]">
                   {item.priority}
                 </Badge>
                 {item.actionType && (
-                  <Badge variant="outline" className="text-[10px] border-white/10 text-slate-400">{item.actionType}</Badge>
+                  <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">{item.actionType}</Badge>
                 )}
-                <Badge variant="outline" className="text-[10px] capitalize border-white/10 text-slate-500">
+                <Badge variant="outline" className="text-[10px] capitalize border-border text-muted-foreground">
                   {item.source}
                 </Badge>
               </div>
@@ -632,12 +639,12 @@ function renderAlerts(alerts: BriefAlert[], style: any) {
   return (
     <div className="space-y-3">
       {alerts.map(alert => (
-        <div key={alert.sourceId} className="p-4 bg-red-950/20 backdrop-blur-sm rounded-lg border border-red-500/30">
+        <div key={alert.sourceId} className="p-4 bg-destructive/10 rounded-lg border border-destructive/30">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium text-sm text-red-400 font-display tracking-wide">{alert.title}</h4>
-            <Badge variant="destructive" className="text-[10px] animate-pulse">{alert.type.replace('_', ' ')}</Badge>
+            <h4 className="font-medium text-sm text-destructive">{alert.title}</h4>
+            <Badge variant="destructive" className="text-[10px]">{alert.type.replace('_', ' ')}</Badge>
           </div>
-          <p className="text-xs text-red-300/70 mt-2 font-mono">{alert.description}</p>
+          <p className="text-xs text-destructive/80 mt-2">{alert.description}</p>
         </div>
       ))}
     </div>

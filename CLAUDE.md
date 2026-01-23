@@ -9,9 +9,8 @@ Work Intel is an AI-powered work intelligence dashboard that synthesizes informa
 ## Development Commands
 
 ```bash
-# Development server (runs on port 3000 by default, 3004 in production sessions)
+# Development server (always runs on port 3004)
 npm run dev
-PORT=3004 npm run dev  # Explicit port
 
 # Production build
 npm run build
@@ -202,6 +201,81 @@ Example: "Use the database agent to add an index on the tasks table for better q
 - Icons from lucide-react only
 - Add `"use client"` directive when using React hooks (useState, useEffect)
 - Avoid extra packages unless absolutely necessary
+
+## Multi-Theme System
+
+The app supports multiple themes with different visual styles and labels.
+
+### Theme Architecture
+
+| File | Purpose |
+|------|---------|
+| `lib/theme-config.ts` | Theme definitions (labels, properties) |
+| `components/theme-provider.tsx` | React context for theme state |
+| `app/globals.css` | CSS variables and theme-specific overrides |
+
+### Current Themes
+
+- **Dark Future** (`future`): Cyberpunk aesthetic with neon colors, glow effects, animations
+- **Original** (`original`): Clean, professional light theme
+
+### Adding New Features (Theme-Aware)
+
+To ensure features work across all themes:
+
+1. **Use CSS variables** instead of hardcoded colors:
+   - ✅ `bg-background`, `text-foreground`, `bg-primary`, `text-muted-foreground`
+   - ❌ `bg-black/80`, `text-slate-300`, `bg-[#1a1a2e]`
+
+2. **Use theme labels** for user-facing text:
+   ```tsx
+   const { t } = useTheme();
+   return <h1>{t('briefTitle')}</h1>; // "Daily Brief" or "Mission Objectives"
+   ```
+
+3. **Check theme properties** for conditional rendering:
+   ```tsx
+   const { hasAnimations, hasGlowEffects, isDark } = useTheme();
+   ```
+
+### Adding a New Theme
+
+1. Add theme config to `lib/theme-config.ts`:
+   ```typescript
+   newTheme: {
+     id: 'newTheme',
+     name: 'Display Name',
+     isDark: true/false,
+     hasGlowEffects: true/false,
+     hasAnimations: true/false,
+     fontStyle: 'clean' | 'futuristic' | 'playful',
+     labels: { /* all ThemeLabels keys */ }
+   }
+   ```
+
+2. Add CSS variables in `app/globals.css`:
+   ```css
+   .theme-newTheme {
+     --background: 0 0% 100%;
+     --foreground: 222 47% 11%;
+     /* ... other variables */
+   }
+   ```
+
+3. Add CSS overrides for any hardcoded colors (if components use them)
+
+### Known Limitation
+
+Some components use hardcoded Tailwind colors (e.g., `bg-black/80`, neon colors) which require CSS overrides in `globals.css` for each theme. For better scalability, prefer CSS variables.
+
+## Browser Testing with Claude in Chrome
+
+**CRITICAL**: When using Claude in Chrome MCP tools for browser testing:
+
+- **DO NOT use screenshot actions** - they crash the browser
+- Use `read_page`, `find`, and `javascript_tool` for inspection instead
+- Use `computer` action with `ref` parameters for clicking (not coordinates when possible)
+- If the extension becomes unresponsive, the user needs to refresh the browser
 
 ## Plan Mode Behavior
 

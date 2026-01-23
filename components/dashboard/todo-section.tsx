@@ -34,6 +34,7 @@ import { useState } from 'react';
 import { Todo, SmartTodo } from '@/lib/types';
 import { useDashboardStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/components/theme-provider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,7 +63,7 @@ const priorityColors = {
   critical: 'text-red-400 border-red-400/30 bg-red-400/10',
   high: 'text-orange-400 border-orange-400/30 bg-orange-400/10',
   medium: 'text-blue-400 border-blue-400/30 bg-blue-400/10',
-  low: 'text-slate-400 border-slate-400/30 bg-slate-400/10',
+  low: 'text-muted-foreground border-muted-foreground/30 bg-muted/30',
 };
 
 const smartTodoTypeConfig = {
@@ -84,7 +85,7 @@ const smartTodoTypeConfig = {
   manual: {
     icon: Plus,
     label: 'Manual',
-    color: 'border-slate-400/30 text-slate-400 bg-slate-400/10',
+    color: 'border-muted-foreground/30 text-muted-foreground bg-muted/30',
   },
 };
 
@@ -92,6 +93,7 @@ export function TodoSection({ todos, onToggleTodo, onAddTodo, onUpdateTodo }: To
   const [newTodoText, setNewTodoText] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
   const [showLegacyTodos, setShowLegacyTodos] = useState(false);
+  const { t } = useTheme();
 
   const {
     smartTodos,
@@ -136,11 +138,11 @@ export function TodoSection({ todos, onToggleTodo, onAddTodo, onUpdateTodo }: To
   const totalDoneCount = doneAiTodos.length + doneManualTodos.length;
 
   return (
-    <Card className="h-full flex flex-col glass-panel border-white/10">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-white/5 bg-black/20">
+    <Card className="h-full flex flex-col glass-panel border-border">
+      <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border bg-muted/20">
         <div className="flex items-center gap-2">
           <CheckCircle2 className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">ACTIVE TASKS</CardTitle>
+          <CardTitle className="text-lg">{t('todoTitle')}</CardTitle>
           <Badge variant="secondary" className="bg-primary/20 text-primary font-mono text-xs">
             {totalActiveCount}
           </Badge>
@@ -150,11 +152,11 @@ export function TodoSection({ todos, onToggleTodo, onAddTodo, onUpdateTodo }: To
         {/* Add new todo */}
         <div className="flex gap-2 mb-4">
           <Input
-            placeholder="ENTER TASK OBJECTIVE..."
+            placeholder={t('addTaskPlaceholder')}
             value={newTodoText}
             onChange={(e) => setNewTodoText(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="font-mono text-sm bg-black/30 border-primary/30 focus-visible:ring-primary/50"
+            className="text-sm bg-card border-border focus-visible:ring-primary/50"
           />
           <Button
             onClick={handleAddTodo}
@@ -169,11 +171,11 @@ export function TodoSection({ todos, onToggleTodo, onAddTodo, onUpdateTodo }: To
         {activeAiTodos.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Brain className="w-4 h-4 text-purple-400" />
-              <h3 className="text-sm font-medium text-slate-300 font-mono">
-                AI ACTION ITEMS
+              <Brain className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-medium text-foreground">
+                {t('aiActionItems')}
               </h3>
-              <Badge variant="outline" className="text-[10px] border-purple-500/30 text-purple-400">
+              <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">
                 {activeAiTodos.length}
               </Badge>
             </div>
@@ -199,14 +201,14 @@ export function TodoSection({ todos, onToggleTodo, onAddTodo, onUpdateTodo }: To
         {activeManualTodos.length > 0 && (
           <div className="space-y-3">
             {activeAiTodos.length > 0 && (
-              <Separator className="my-4 bg-white/5" />
+              <Separator className="my-4 bg-border" />
             )}
             <div className="flex items-center gap-2">
-              <Plus className="w-4 h-4 text-slate-400" />
-              <h3 className="text-sm font-medium text-slate-300 font-mono">
-                MANUAL TASKS
+              <Plus className="w-4 h-4 text-muted-foreground" />
+              <h3 className="text-sm font-medium text-foreground">
+                {t('manualTasks')}
               </h3>
-              <Badge variant="outline" className="text-[10px] border-slate-500/30 text-slate-400">
+              <Badge variant="outline" className="text-[10px] border-border text-muted-foreground">
                 {activeManualTodos.length}
               </Badge>
             </div>
@@ -225,24 +227,24 @@ export function TodoSection({ todos, onToggleTodo, onAddTodo, onUpdateTodo }: To
         {/* Empty state */}
         {totalActiveCount === 0 && (
           <div className="text-center py-12 text-muted-foreground">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 mb-4">
-              <CheckCircle2 className="h-6 w-6 text-slate-500" />
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-4">
+              <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="font-mono text-sm">ALL SYSTEMS NOMINAL.</p>
-            <p className="text-xs mt-1 text-slate-600">No active tasks pending.</p>
+            <p className="text-sm font-medium">{t('emptyTodos')}</p>
+            <p className="text-xs mt-1">{t('emptyTodosSubtext')}</p>
           </div>
         )}
 
         {/* Completed todos toggle */}
         {totalDoneCount > 0 && (
-          <div className="pt-4 border-t border-white/5">
+          <div className="pt-4 border-t border-border">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowCompleted(!showCompleted)}
-              className="w-full justify-start text-slate-400 hover:text-slate-300 font-mono text-xs"
+              className="w-full justify-start text-muted-foreground hover:text-foreground text-xs"
             >
-              {showCompleted ? '[HIDE]' : '[SHOW]'} COMPLETED ({totalDoneCount})
+              {showCompleted ? t('hideCompleted') : t('showCompleted')} ({totalDoneCount})
             </Button>
 
             {showCompleted && (
@@ -297,6 +299,7 @@ function SmartTodoItem({
   onCopy,
   onMarkDone,
 }: SmartTodoItemProps) {
+  const { t } = useTheme();
   const config = smartTodoTypeConfig[todo.type] || smartTodoTypeConfig.manual;
   const Icon = config.icon;
   const isDone = todo.status === 'done';
@@ -309,8 +312,8 @@ function SmartTodoItem({
       className={cn(
         "group rounded-lg border transition-all duration-300",
         isDone 
-          ? "bg-slate-900/30 border-white/5 opacity-60" 
-          : "bg-background/40 backdrop-blur-sm border-white/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.05)]",
+          ? "bg-muted/30 border-border opacity-60" 
+          : "glass-panel-hover bg-card/40 backdrop-blur-sm border-border",
         isExpanded && !isDone ? "ring-1 ring-primary/30 bg-primary/5" : ""
       )}
     >
@@ -328,7 +331,7 @@ function SmartTodoItem({
             <h4
               className={cn(
                 "font-medium text-sm transition-colors",
-                isDone ? "text-muted-foreground line-through decoration-slate-600" : "text-slate-200 group-hover:text-white"
+                isDone ? "text-muted-foreground line-through decoration-slate-600" : "text-foreground"
               )}
             >
               {todo.title}
@@ -379,18 +382,18 @@ function SmartTodoItem({
       {/* Expanded content */}
       {isExpanded && (
         <div className="px-3 pb-3 pt-0 space-y-3 animate-accordion-down">
-          <Separator className="bg-white/5" />
+          <Separator className="bg-border" />
 
           {/* Draft content area */}
           <div className="space-y-2">
-            <label className="text-xs font-mono text-slate-400 uppercase tracking-wide">
-              {todo.type === 'ai_meeting_prep' ? 'Prep Notes' : 'Draft Payload'}
+            <label className="text-xs text-muted-foreground">
+              {todo.type === 'ai_meeting_prep' ? t('prepNotesLabel') : t('draftLabel')}
             </label>
 
             {isPending && !todo.draftContent && (
-              <div className="p-4 bg-black/20 rounded-lg border border-dashed border-white/10 text-center">
-                <p className="text-xs text-slate-400 mb-3 font-mono">
-                  Awaiting draft generation.
+              <div className="p-4 bg-muted/20 rounded-lg border border-dashed border-border text-center">
+                <p className="text-xs text-muted-foreground mb-3">
+                  Click below to generate a draft.
                 </p>
                 <Button
                   size="sm"
@@ -399,23 +402,23 @@ function SmartTodoItem({
                     onPrepare();
                   }}
                   disabled={isPreparing || isPreparingStatus}
-                  className="h-7 text-xs font-mono"
+                  className="h-7 text-xs"
                 >
                   {isPreparing || isPreparingStatus ? (
                     <Loader2 className="w-3 h-3 mr-2 animate-spin" />
                   ) : (
                     <Wand2 className="w-3 h-3 mr-2" />
                   )}
-                  INITIATE DRAFT
+                  {t('prepareButton')}
                 </Button>
               </div>
             )}
 
             {isPreparingStatus && (
-              <div className="p-4 bg-black/20 rounded-lg border border-white/10 text-center">
+              <div className="p-4 bg-muted/20 rounded-lg border border-border text-center">
                 <Loader2 className="w-5 h-5 mx-auto mb-2 animate-spin text-primary" />
-                <p className="text-xs text-primary font-mono animate-pulse">
-                  GENERATING CONTENT...
+                <p className="text-xs text-primary animate-pulse">
+                  {t('generatingBrief')}
                 </p>
               </div>
             )}
@@ -425,7 +428,7 @@ function SmartTodoItem({
                 <Textarea
                   value={todo.draftContent || ''}
                   onChange={(e) => onUpdateDraft(e.target.value)}
-                  className="min-h-[150px] font-mono text-xs bg-black/40 border-white/10 focus-visible:ring-primary/50 text-slate-300"
+                  className="min-h-[150px] text-xs bg-muted/40 border-border focus-visible:ring-primary/50 text-foreground"
                   placeholder="Draft content..."
                   disabled={isDone}
                 />
@@ -445,14 +448,14 @@ function SmartTodoItem({
                     onPrepare();
                   }}
                   disabled={isPreparing || isPreparingStatus}
-                  className="h-7 text-xs font-mono border-primary/30 text-primary hover:bg-primary/10"
+                  className="h-7 text-xs border-primary/30 text-primary hover:bg-primary/10"
                 >
                   {isPreparing || isPreparingStatus ? (
                     <Loader2 className="w-3 h-3 mr-2 animate-spin" />
                   ) : (
                     <Wand2 className="w-3 h-3 mr-2" />
                   )}
-                  PREPARE
+                  {t('prepareButton')}
                 </Button>
               )}
 
@@ -466,10 +469,10 @@ function SmartTodoItem({
                       onPrepare();
                     }}
                     disabled={isPreparing || isPreparingStatus}
-                    className="h-7 text-xs font-mono"
+                    className="h-7 text-xs"
                   >
                     <Wand2 className="w-3 h-3 mr-2" />
-                    REGENERATE
+                    {t('regenerateButton')}
                   </Button>
 
                   <Button
@@ -480,10 +483,10 @@ function SmartTodoItem({
                       onCopy();
                     }}
                     disabled={!todo.draftContent}
-                    className="h-7 text-xs font-mono"
+                    className="h-7 text-xs"
                   >
                     <Copy className="w-3 h-3 mr-2" />
-                    COPY
+                    {t('copyButton')}
                   </Button>
 
                   <Button
@@ -492,10 +495,10 @@ function SmartTodoItem({
                       e.stopPropagation();
                       onMarkDone();
                     }}
-                    className="h-7 text-xs font-mono bg-primary hover:bg-primary/80"
+                    className="h-7 text-xs bg-primary hover:bg-primary/80"
                   >
                     <Check className="w-3 h-3 mr-2" />
-                    COMPLETE
+                    {t('completeButton')}
                   </Button>
                 </>
               )}
@@ -504,12 +507,12 @@ function SmartTodoItem({
 
           {/* Original context (collapsible) */}
           {todo.originalContext && Object.keys(todo.originalContext).length > 0 && (
-            <details className="text-[10px] font-mono group/details">
-              <summary className="cursor-pointer text-slate-500 hover:text-slate-300 flex items-center gap-1">
+            <details className="text-[10px] group/details">
+              <summary className="cursor-pointer text-muted-foreground hover:text-foreground flex items-center gap-1">
                 <ChevronRight className="w-3 h-3 group-open/details:rotate-90 transition-transform" />
-                VIEW SOURCE DATA
+                View source data
               </summary>
-              <pre className="mt-2 p-2 bg-black/40 rounded border border-white/5 text-slate-400 overflow-auto max-h-32">
+              <pre className="mt-2 p-2 bg-muted/40 rounded border border-border text-muted-foreground overflow-auto max-h-32 font-mono">
                 {JSON.stringify(todo.originalContext, null, 2)}
               </pre>
             </details>
@@ -533,8 +536,8 @@ function ManualSmartTodoItem({ todo, onMarkDone }: ManualSmartTodoItemProps) {
       className={cn(
         "border rounded-lg p-3 transition-all duration-200",
         isDone
-          ? "bg-slate-900/30 border-white/5 opacity-60"
-          : "bg-background/40 backdrop-blur-sm border-white/10 hover:border-slate-600 hover:shadow-md"
+          ? "bg-muted/30 border-border opacity-60"
+          : "glass-panel-hover bg-card/40 backdrop-blur-sm border-border hover:border-muted-foreground/50 hover:shadow-md"
       )}
     >
       <div className="flex items-center gap-3">
@@ -547,7 +550,7 @@ function ManualSmartTodoItem({ todo, onMarkDone }: ManualSmartTodoItemProps) {
         <span
           className={cn(
             "flex-1 text-sm transition-colors",
-            isDone ? "line-through text-muted-foreground decoration-slate-600" : "text-slate-300"
+            isDone ? "line-through text-muted-foreground decoration-slate-600" : "text-foreground"
           )}
         >
           {todo.title}

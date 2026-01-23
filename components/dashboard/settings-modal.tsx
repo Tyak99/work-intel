@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Github, Calendar, Mail, Settings, CheckCircle, XCircle, Loader2, Activity, Zap } from 'lucide-react';
+import { Github, Calendar, Mail, Settings, CheckCircle, XCircle, Loader2, Activity, Zap, Monitor, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDashboardStore } from '@/lib/store';
+import { useTheme } from '@/components/theme-provider';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 
@@ -57,6 +58,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [connecting, setConnecting] = useState<Record<string, boolean>>({});
   const [testing, setTesting] = useState<Record<string, boolean>>({});
   const { toolStatus, refreshToolStatus } = useDashboardStore();
+  const { themeId, setTheme, theme } = useTheme();
 
   useEffect(() => {
     if (isOpen) {
@@ -180,8 +182,8 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-2xl bg-slate-950/90 backdrop-blur-xl border border-white/10 text-foreground p-0 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] my-4 max-h-[calc(100vh-4rem)] flex flex-col">
-        <DialogHeader className="p-6 border-b border-white/5 bg-black/40 shrink-0">
+      <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-2xl bg-card/95 backdrop-blur-xl border border-border text-foreground p-0 overflow-hidden shadow-lg my-4 max-h-[calc(100vh-4rem)] flex flex-col">
+        <DialogHeader className="p-6 border-b border-border bg-muted/40 shrink-0">
           <DialogTitle className="flex items-center space-x-3 text-xl font-display font-bold tracking-widest uppercase">
             <Settings className="w-5 h-5 text-primary animate-spin-slow" />
             <span className="text-glow">System Configuration</span>
@@ -189,6 +191,38 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+          <div className="space-y-3">
+             <h3 className="text-sm font-bold font-display uppercase tracking-wide text-muted-foreground">Interface Theme</h3>
+             <div className="grid grid-cols-2 gap-3">
+               <button
+                 onClick={() => setTheme('future')}
+                 className={cn(
+                   "flex items-center justify-center space-x-2 p-3 rounded-md border transition-all duration-300",
+                   themeId === 'future' 
+                     ? "bg-primary/20 border-primary text-primary shadow-glow-sm" 
+                     : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/60"
+                 )}
+               >
+                 <Sparkles className="w-4 h-4" />
+                 <span className="text-xs font-mono font-bold uppercase">Dark Future</span>
+               </button>
+               <button
+                 onClick={() => setTheme('original')}
+                 className={cn(
+                   "flex items-center justify-center space-x-2 p-3 rounded-md border transition-all duration-300",
+                   themeId === 'original' 
+                     ? "bg-primary/20 border-primary text-primary shadow-glow-sm" 
+                     : "bg-muted/40 border-border text-muted-foreground hover:bg-muted/60"
+                 )}
+               >
+                 <Monitor className="w-4 h-4" />
+                 <span className="text-xs font-mono font-bold uppercase">Original</span>
+               </button>
+             </div>
+          </div>
+
+          <div className="h-px bg-border my-4" />
+
           <p className="text-sm font-mono text-muted-foreground border-l-2 border-primary/50 pl-3">
             ESTABLISH UPLINKS TO EXTERNAL DATA STREAMS FOR ANALYSIS.
           </p>
@@ -206,21 +240,21 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 <div key={tool.id} className={cn(
                   "relative overflow-hidden rounded-lg border transition-all duration-300 group",
                   isConnected 
-                    ? "bg-primary/5 border-primary/30 shadow-[0_0_15px_rgba(6,182,212,0.1)]" 
-                    : "bg-black/40 border-white/5 hover:border-white/20"
+                    ? "bg-primary/5 border-primary/30 shadow-glow-sm" 
+                    : "bg-muted/40 border-border hover:border-muted-foreground/30"
                 )}>
                   {isConnected && <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />}
                   
                   <div className="p-4 relative z-10">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
-                        <div className={cn("p-2 rounded bg-black/50 border border-white/10", isConnected ? "text-primary" : "text-muted-foreground")}>
+                        <div className={cn("p-2 rounded bg-muted/50 border border-border", isConnected ? "text-primary" : "text-muted-foreground")}>
                           <Icon className="w-5 h-5" />
                         </div>
                         <div>
                           <h3 className="text-sm font-bold font-display tracking-wide uppercase">{tool.name}</h3>
                           <div className="flex items-center mt-1 gap-2">
-                             <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isConnected ? "bg-green-500" : hasError ? "bg-red-500" : "bg-slate-600")} />
+                             <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isConnected ? "bg-green-500" : hasError ? "bg-red-500" : "bg-muted-foreground/50")} />
                              <span className="text-[10px] font-mono uppercase text-muted-foreground">
                                {isConnecting ? 'HANDSHAKING...' : isConnected ? 'ONLINE' : hasError ? 'ERROR' : 'OFFLINE'}
                              </span>
@@ -228,21 +262,21 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                         </div>
                       </div>
                       
-                      <Badge variant="outline" className={cn("text-[10px] font-mono border-white/10", 
-                        isConnected ? "bg-green-500/10 text-green-400 border-green-500/30" : 
-                        hasError ? "bg-red-500/10 text-red-400 border-red-500/30" : "bg-white/5 text-slate-500"
+                      <Badge variant="outline" className={cn("text-[10px] font-mono border-border", 
+                        isConnected ? "bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30" : 
+                        hasError ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30" : "bg-muted/50 text-muted-foreground"
                       )}>
                         {isConnected ? 'SIGNAL: STRONG' : 'NO SIGNAL'}
                       </Badge>
                     </div>
                     
-                    <p className="text-xs text-slate-400 font-mono mb-4 pl-12 border-l border-white/5 hidden sm:block">
+                    <p className="text-xs text-muted-foreground font-mono mb-4 pl-12 border-l border-border hidden sm:block">
                       {tool.description}
                     </p>
                   
                     <div className="pl-0 sm:pl-12">
                       {tool.authType === 'token' ? (
-                        <div className="space-y-3 bg-black/20 p-3 rounded border border-white/5">
+                        <div className="space-y-3 bg-muted/30 p-3 rounded border border-border">
                           {tool.id === 'jira' ? (
                             <>
                               <div className="space-y-1">
@@ -253,7 +287,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                   placeholder="https://company.atlassian.net"
                                   value={tokens[tool.id]?.url || ''}
                                   onChange={(e) => handleTokenChange(tool.id, 'url', e.target.value)}
-                                  className="h-8 font-mono text-xs bg-black/40 border-white/10"
+                                  className="h-8 font-mono text-xs bg-background border-border"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -264,7 +298,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                   placeholder="agent@company.com"
                                   value={tokens[tool.id]?.email || ''}
                                   onChange={(e) => handleTokenChange(tool.id, 'email', e.target.value)}
-                                  className="h-8 font-mono text-xs bg-black/40 border-white/10"
+                                  className="h-8 font-mono text-xs bg-background border-border"
                                 />
                               </div>
                               <div className="space-y-1">
@@ -276,7 +310,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                     placeholder="••••••••••••••••"
                                     value={tokens[tool.id]?.token || ''}
                                     onChange={(e) => handleTokenChange(tool.id, 'token', e.target.value)}
-                                    className="h-8 flex-1 font-mono text-xs bg-black/40 border-white/10"
+                                    className="h-8 flex-1 font-mono text-xs bg-background border-border"
                                   />
                                   <Button 
                                     onClick={() => handleConnect(tool.id)}
@@ -303,7 +337,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                   placeholder="••••••••••••••••"
                                   value={tokens[tool.id]?.token || ''}
                                   onChange={(e) => handleTokenChange(tool.id, 'token', e.target.value)}
-                                  className="h-8 flex-1 font-mono text-xs bg-black/40 border-white/10"
+                                  className="h-8 flex-1 font-mono text-xs bg-background border-border"
                                 />
                                 <div className="flex space-x-2">
                                   <Button 
@@ -321,7 +355,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                     onClick={() => handleTestConnection(tool.id)}
                                     disabled={isTesting}
                                     variant="ghost"
-                                    className="h-8 px-3 text-xs border border-white/10 hover:bg-white/5 flex-1 sm:flex-initial"
+                                    className="h-8 px-3 text-xs border border-border hover:bg-muted flex-1 sm:flex-initial"
                                     size="sm"
                                   >
                                     {isTesting ? (
@@ -334,7 +368,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                           )}
                         </div>
                       ) : (
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-black/20 p-3 rounded border border-white/5 gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-muted/30 p-3 rounded border border-border gap-3">
                           <div>
                             <p className="text-[10px] text-muted-foreground font-mono uppercase">
                               {tool.id === 'gmail' || tool.id === 'calendar'
@@ -380,7 +414,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </div>
         </div>
         
-        <div className="p-4 border-t border-white/5 bg-black/40 flex justify-end space-x-3 shrink-0">
+        <div className="p-4 border-t border-border bg-muted/40 flex justify-end space-x-3 shrink-0">
           <Button variant="ghost" onClick={onClose} className="text-xs font-mono">
             [CANCEL]
           </Button>
