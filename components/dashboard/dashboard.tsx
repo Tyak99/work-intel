@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Header } from './header';
 import { BriefSection } from './brief-section';
 import { TodoSection } from './todo-section';
@@ -10,7 +11,7 @@ import { SettingsModal } from './settings-modal';
 import { useDashboardStore } from '@/lib/store';
 import { useTheme } from '@/components/theme-provider';
 import toast from 'react-hot-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
 
 export function Dashboard() {
   const router = useRouter();
@@ -98,26 +99,26 @@ export function Dashboard() {
       <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
       <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[128px] pointer-events-none z-0 animate-pulse-glow" />
       <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[128px] pointer-events-none z-0 animate-pulse-glow" style={{ animationDelay: '1s' }} />
-      
-      <Header 
+
+      <Header
         onGenerateBrief={generateDailyBrief}
         onOpenSettings={() => setIsSettingsOpen(true)}
         isGenerating={isGeneratingBrief}
       />
-      
+
       <main className="container mx-auto px-4 pt-6 pb-20 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-6rem)]">
           {/* Brief Column - Main Feed */}
           <div className="lg:col-span-8 h-full overflow-y-auto custom-scrollbar pr-2 pb-10">
-            <BriefSection 
+            <BriefSection
               brief={brief}
               isGenerating={isGeneratingBrief}
             />
           </div>
-          
+
           {/* Tasks Column - Sidebar */}
           <div className="lg:col-span-4 h-full overflow-hidden pb-10">
-            <TodoSection 
+            <TodoSection
               todos={todos}
               onToggleTodo={toggleTodo}
               onAddTodo={addTodo}
@@ -126,10 +127,22 @@ export function Dashboard() {
           </div>
         </div>
       </main>
-      
+
       <StatusBar toolStatus={toolStatus} />
-      
-      <SettingsModal 
+
+      {/* AI Assistant Link - Floating button */}
+      {brief && (
+        <Link
+          href="/ai-assistant"
+          className="fixed bottom-20 right-6 z-50 flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"
+        >
+          <Sparkles className="h-4 w-4" />
+          <span className="font-medium">{t('aiSuggestions')}</span>
+          <span className="text-xs bg-primary-foreground/20 px-1.5 py-0.5 rounded-full">Beta</span>
+        </Link>
+      )}
+
+      <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
       />

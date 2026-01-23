@@ -59,6 +59,12 @@ export interface ThemeLabels {
 
   // Priority badge label
   priorityTarget: string;
+
+  // Generative UI
+  aiSuggestions: string;
+  askAnything: string;
+  generatedView: string;
+  quickPrompts: string;
 }
 
 export interface ThemeConfig {
@@ -137,7 +143,13 @@ export const themes: Record<string, ThemeConfig> = {
       loginFooter: "System Version 2.0.4 • Status: Nominal",
 
       // Priority badge
-      priorityTarget: "Priority Target"
+      priorityTarget: "Priority Target",
+
+      // Generative UI
+      aiSuggestions: "AI Intelligence",
+      askAnything: "Ask the system anything...",
+      generatedView: "Generated Analysis",
+      quickPrompts: "Quick Commands"
     }
   },
   original: {
@@ -205,7 +217,13 @@ export const themes: Record<string, ThemeConfig> = {
       loginFooter: "WorkIntel • Your AI productivity assistant",
 
       // Priority badge
-      priorityTarget: "High Priority"
+      priorityTarget: "High Priority",
+
+      // Generative UI
+      aiSuggestions: "AI Suggestions",
+      askAnything: "Ask anything about your work...",
+      generatedView: "Generated View",
+      quickPrompts: "Quick Prompts"
     }
   }
 };
