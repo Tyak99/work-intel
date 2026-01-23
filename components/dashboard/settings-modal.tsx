@@ -6,10 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Github, Calendar, Mail, Settings, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Github, Calendar, Mail, Settings, CheckCircle, XCircle, Loader2, Activity, Zap } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useDashboardStore } from '@/lib/store';
 import toast from 'react-hot-toast';
+import { cn } from '@/lib/utils';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -19,35 +20,35 @@ interface SettingsModalProps {
 const tools = [
   {
     id: 'jira',
-    name: 'Jira',
-    icon: Settings,
-    description: 'Connect to Jira for issue tracking',
+    name: 'JIRA UPLINK',
+    icon: Activity,
+    description: 'Establish connection to Jira issue tracking protocol',
     authType: 'token',
-    connected: false,
+    color: 'neon-amber',
   },
   {
     id: 'github',
-    name: 'GitHub',
+    name: 'GITHUB REPO',
     icon: Github,
-    description: 'Connect to GitHub for PR reviews and issues',
+    description: 'Sync with version control and PR systems',
     authType: 'token',
-    connected: true,
+    color: 'neon-purple',
   },
   {
     id: 'gmail',
-    name: 'Gmail',
+    name: 'COMMS ARRAY',
     icon: Mail,
-    description: 'Read-only access to Gmail for email analysis',
+    description: 'Monitor secure communication channels (Gmail)',
     authType: 'oauth',
-    connected: false,
+    color: 'neon-green',
   },
   {
     id: 'calendar',
-    name: 'Google Calendar',
+    name: 'CHRONO SYNC',
     icon: Calendar,
-    description: 'Read-only access to Google Calendar for meeting prep',
+    description: 'Synchronize temporal events and schedules',
     authType: 'oauth',
-    connected: true,
+    color: 'neon-blue',
   },
 ];
 
@@ -91,12 +92,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       if (result.success) {
         await refreshToolStatus();
         setTokens(prev => ({ ...prev, [toolId]: {} })); // Clear tokens after successful connection
-        toast.success(`Successfully connected to ${toolId}!`);
+        toast.success(`Connection established: ${toolId}`);
       } else {
-        toast.error(`Failed to connect to ${toolId}: ${result.message}`);
+        toast.error(`Connection failed: ${result.message}`);
       }
     } catch (error) {
-      toast.error(`Error connecting to ${toolId}. Please check your credentials.`);
+      toast.error(`Error connecting to ${toolId}. Check credentials.`);
     } finally {
       setConnecting(prev => ({ ...prev, [toolId]: false }));
     }
@@ -109,14 +110,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       await refreshToolStatus();
       const status = toolStatus[toolId];
       if (status?.status === 'connected') {
-        toast.success(`${toolId} connection is working!`);
+        toast.success(`${toolId} signal strength: 100%`);
       } else if (status?.status === 'error') {
-        toast.error(`${toolId} connection failed: ${status.error}`);
+        toast.error(`${toolId} connection error: ${status.error}`);
       } else {
-        toast.error(`${toolId} is not connected`);
+        toast.error(`${toolId} offline`);
       }
     } catch (error) {
-      toast.error(`Failed to test ${toolId} connection`);
+      toast.error(`Diagnostic failed for ${toolId}`);
     } finally {
       setTesting(prev => ({ ...prev, [toolId]: false }));
     }
@@ -144,15 +145,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           // Redirect to Nylas OAuth
           window.location.href = result.authUrl;
         } else {
-          toast.error('Failed to initiate authentication');
+          toast.error('Auth initiation failed');
         }
       } catch (error) {
-        toast.error('Error connecting to email/calendar');
+        toast.error('Error initiating OAuth sequence');
       } finally {
         setConnecting(prev => ({ ...prev, gmail: false, calendar: false }));
       }
     } else {
-      toast.error('OAuth integration coming soon!');
+      toast.error('Protocol not implemented');
     }
   };
 
@@ -167,29 +168,29 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
         if (response.ok) {
           await refreshToolStatus();
-          toast.success('Successfully disconnected email and calendar');
+          toast.success('Disconnection successful');
         } else {
-          toast.error('Failed to disconnect');
+          toast.error('Disconnection failed');
         }
       } catch (error) {
-        toast.error('Error disconnecting');
+        toast.error('Error executing disconnect');
       }
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Settings className="w-5 h-5" />
-            <span>Tool Connections</span>
+      <DialogContent className="max-w-[calc(100vw-2rem)] w-full sm:max-w-2xl bg-slate-950/90 backdrop-blur-xl border border-white/10 text-foreground p-0 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] my-4 max-h-[calc(100vh-4rem)] flex flex-col">
+        <DialogHeader className="p-6 border-b border-white/5 bg-black/40 shrink-0">
+          <DialogTitle className="flex items-center space-x-3 text-xl font-display font-bold tracking-widest uppercase">
+            <Settings className="w-5 h-5 text-primary animate-spin-slow" />
+            <span className="text-glow">System Configuration</span>
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4 mt-6">
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Connect your work tools to enable AI-powered analysis and task generation.
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+          <p className="text-sm font-mono text-muted-foreground border-l-2 border-primary/50 pl-3">
+            ESTABLISH UPLINKS TO EXTERNAL DATA STREAMS FOR ANALYSIS.
           </p>
           
           <div className="grid gap-4">
@@ -202,191 +203,190 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               const isTesting = testing[tool.id];
               
               return (
-                <Card key={tool.id} className={`${
+                <div key={tool.id} className={cn(
+                  "relative overflow-hidden rounded-lg border transition-all duration-300 group",
                   isConnected 
-                    ? 'border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/50' 
-                    : 'border-slate-200 dark:border-slate-700'
-                }`}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center justify-between">
+                    ? "bg-primary/5 border-primary/30 shadow-[0_0_15px_rgba(6,182,212,0.1)]" 
+                    : "bg-black/40 border-white/5 hover:border-white/20"
+                )}>
+                  {isConnected && <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />}
+                  
+                  <div className="p-4 relative z-10">
+                    <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center space-x-3">
-                        <Icon className="w-5 h-5" />
-                        <span className="text-lg">{tool.name}</span>
-                        {isConnecting ? (
-                          <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">
-                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                            Connecting...
-                          </Badge>
-                        ) : isTesting ? (
-                          <Badge variant="outline" className="bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300">
-                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                            Testing...
-                          </Badge>
-                        ) : isConnected ? (
-                          <Badge variant="outline" className="bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300">
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Connected
-                          </Badge>
-                        ) : hasError ? (
-                          <Badge variant="outline" className="bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300">
-                            <XCircle className="w-3 h-3 mr-1" />
-                            Error
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                            <XCircle className="w-3 h-3 mr-1" />
-                            Disconnected
-                          </Badge>
-                        )}
+                        <div className={cn("p-2 rounded bg-black/50 border border-white/10", isConnected ? "text-primary" : "text-muted-foreground")}>
+                          <Icon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-bold font-display tracking-wide uppercase">{tool.name}</h3>
+                          <div className="flex items-center mt-1 gap-2">
+                             <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isConnected ? "bg-green-500" : hasError ? "bg-red-500" : "bg-slate-600")} />
+                             <span className="text-[10px] font-mono uppercase text-muted-foreground">
+                               {isConnecting ? 'HANDSHAKING...' : isConnected ? 'ONLINE' : hasError ? 'ERROR' : 'OFFLINE'}
+                             </span>
+                          </div>
+                        </div>
                       </div>
-                    </CardTitle>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                      
+                      <Badge variant="outline" className={cn("text-[10px] font-mono border-white/10", 
+                        isConnected ? "bg-green-500/10 text-green-400 border-green-500/30" : 
+                        hasError ? "bg-red-500/10 text-red-400 border-red-500/30" : "bg-white/5 text-slate-500"
+                      )}>
+                        {isConnected ? 'SIGNAL: STRONG' : 'NO SIGNAL'}
+                      </Badge>
+                    </div>
+                    
+                    <p className="text-xs text-slate-400 font-mono mb-4 pl-12 border-l border-white/5 hidden sm:block">
                       {tool.description}
                     </p>
-                  </CardHeader>
                   
-                  <CardContent className="pt-0">
-                    {tool.authType === 'token' ? (
-                      <div className="space-y-3">
-                        {tool.id === 'jira' ? (
-                          <>
-                            <div className="space-y-2">
-                              <Label htmlFor={`${tool.id}-url`}>Jira URL</Label>
-                              <Input
-                                id={`${tool.id}-url`}
-                                type="url"
-                                placeholder="https://your-company.atlassian.net"
-                                value={tokens[tool.id]?.url || ''}
-                                onChange={(e) => handleTokenChange(tool.id, 'url', e.target.value)}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`${tool.id}-email`}>Email</Label>
-                              <Input
-                                id={`${tool.id}-email`}
-                                type="email"
-                                placeholder="your-email@company.com"
-                                value={tokens[tool.id]?.email || ''}
-                                onChange={(e) => handleTokenChange(tool.id, 'email', e.target.value)}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor={`${tool.id}-token`}>API Token</Label>
-                              <div className="flex space-x-2">
+                    <div className="pl-0 sm:pl-12">
+                      {tool.authType === 'token' ? (
+                        <div className="space-y-3 bg-black/20 p-3 rounded border border-white/5">
+                          {tool.id === 'jira' ? (
+                            <>
+                              <div className="space-y-1">
+                                <Label htmlFor={`${tool.id}-url`} className="text-[10px] uppercase text-muted-foreground">Jira URL</Label>
+                                <Input
+                                  id={`${tool.id}-url`}
+                                  type="url"
+                                  placeholder="https://company.atlassian.net"
+                                  value={tokens[tool.id]?.url || ''}
+                                  onChange={(e) => handleTokenChange(tool.id, 'url', e.target.value)}
+                                  className="h-8 font-mono text-xs bg-black/40 border-white/10"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label htmlFor={`${tool.id}-email`} className="text-[10px] uppercase text-muted-foreground">Email</Label>
+                                <Input
+                                  id={`${tool.id}-email`}
+                                  type="email"
+                                  placeholder="agent@company.com"
+                                  value={tokens[tool.id]?.email || ''}
+                                  onChange={(e) => handleTokenChange(tool.id, 'email', e.target.value)}
+                                  className="h-8 font-mono text-xs bg-black/40 border-white/10"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label htmlFor={`${tool.id}-token`} className="text-[10px] uppercase text-muted-foreground">API Token</Label>
+                                <div className="flex space-x-2">
+                                  <Input
+                                    id={`${tool.id}-token`}
+                                    type="password"
+                                    placeholder="••••••••••••••••"
+                                    value={tokens[tool.id]?.token || ''}
+                                    onChange={(e) => handleTokenChange(tool.id, 'token', e.target.value)}
+                                    className="h-8 flex-1 font-mono text-xs bg-black/40 border-white/10"
+                                  />
+                                  <Button 
+                                    onClick={() => handleConnect(tool.id)}
+                                    disabled={!tokens[tool.id]?.url || !tokens[tool.id]?.email || !tokens[tool.id]?.token || isConnecting}
+                                    className="h-8 px-4 text-xs font-bold"
+                                    variant={isConnected ? "outline" : "default"}
+                                  >
+                                    {isConnecting ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : isConnected ? 'UPDATE' : 'CONNECT'}
+                                  </Button>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="space-y-1">
+                              <Label htmlFor={`${tool.id}-token`} className="text-[10px] uppercase text-muted-foreground">
+                                {tool.id === 'github' ? 'Personal Access Token' : 'API Token'}
+                              </Label>
+                              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                                 <Input
                                   id={`${tool.id}-token`}
                                   type="password"
-                                  placeholder="Your Jira API token..."
+                                  placeholder="••••••••••••••••"
                                   value={tokens[tool.id]?.token || ''}
                                   onChange={(e) => handleTokenChange(tool.id, 'token', e.target.value)}
-                                  className="flex-1"
+                                  className="h-8 flex-1 font-mono text-xs bg-black/40 border-white/10"
                                 />
-                                <Button 
-                                  onClick={() => handleConnect(tool.id)}
-                                  disabled={!tokens[tool.id]?.url || !tokens[tool.id]?.email || !tokens[tool.id]?.token || isConnecting}
-                                  variant={isConnected ? "outline" : "default"}
-                                >
-                                  {isConnecting ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                  ) : isConnected ? 'Update' : 'Connect'}
-                                </Button>
+                                <div className="flex space-x-2">
+                                  <Button 
+                                    onClick={() => handleConnect(tool.id)}
+                                    disabled={!tokens[tool.id]?.token || isConnecting}
+                                    variant={isConnected ? "outline" : "default"}
+                                    className="h-8 px-4 text-xs font-bold flex-1 sm:flex-initial"
+                                    size="sm"
+                                  >
+                                    {isConnecting ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : isConnected ? 'UPDATE' : 'CONNECT'}
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleTestConnection(tool.id)}
+                                    disabled={isTesting}
+                                    variant="ghost"
+                                    className="h-8 px-3 text-xs border border-white/10 hover:bg-white/5 flex-1 sm:flex-initial"
+                                    size="sm"
+                                  >
+                                    {isTesting ? (
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : 'TEST'}
+                                  </Button>
+                                </div>
                               </div>
                             </div>
-                          </>
-                        ) : (
-                          <div className="space-y-2">
-                            <Label htmlFor={`${tool.id}-token`}>
-                              {tool.id === 'github' ? 'Personal Access Token' : 'API Token'}
-                            </Label>
-                            <div className="flex space-x-2">
-                              <Input
-                                id={`${tool.id}-token`}
-                                type="password"
-                                placeholder={`Enter your ${tool.name} token...`}
-                                value={tokens[tool.id]?.token || ''}
-                                onChange={(e) => handleTokenChange(tool.id, 'token', e.target.value)}
-                                className="flex-1"
-                              />
-                              <Button 
-                                onClick={() => handleConnect(tool.id)}
-                                disabled={!tokens[tool.id]?.token || isConnecting}
-                                variant={isConnected ? "outline" : "default"}
-                                size="sm"
-                              >
-                                {isConnecting ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : isConnected ? 'Update' : 'Connect'}
-                              </Button>
-                              <Button
-                                onClick={() => handleTestConnection(tool.id)}
-                                disabled={isTesting}
-                                variant="outline"
-                                size="sm"
-                              >
-                                {isTesting ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : 'Test'}
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Get your {tool.id === 'github' ? 'personal access token' : 'API token'} from your {tool.name} settings.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">
-                            {tool.id === 'gmail' || tool.id === 'calendar'
-                              ? 'Secure read-only access via Nylas (no editing/deleting permissions)'
-                              : 'Uses OAuth 2.0 for secure authentication'}
-                          </p>
-                          {isConnected && status?.lastSync && (
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                              Last synced: {new Date(status.lastSync).toLocaleString()}
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-black/20 p-3 rounded border border-white/5 gap-3">
+                          <div>
+                            <p className="text-[10px] text-muted-foreground font-mono uppercase">
+                              {tool.id === 'gmail' || tool.id === 'calendar'
+                                ? 'SECURE OAUTH VIA NYLAS'
+                                : 'STANDARD OAUTH 2.0'}
                             </p>
-                          )}
-                        </div>
-                        <div className="flex space-x-2">
-                          {isConnected && (tool.id === 'gmail' || tool.id === 'calendar') && (
+                            {isConnected && status?.lastSync && (
+                              <p className="text-[10px] text-primary/70 mt-1 font-mono">
+                                LAST SYNC: {new Date(status.lastSync).toLocaleTimeString()}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex space-x-2">
+                            {isConnected && (tool.id === 'gmail' || tool.id === 'calendar') && (
+                              <Button
+                                onClick={() => handleDisconnect(tool.id)}
+                                variant="destructive"
+                                className="h-7 text-[10px] uppercase font-bold bg-red-900/20 text-red-400 border border-red-500/30 hover:bg-red-900/40"
+                                size="sm"
+                              >
+                                Terminate
+                              </Button>
+                            )}
                             <Button
-                              onClick={() => handleDisconnect(tool.id)}
-                              variant="outline"
-                              size="sm"
+                              onClick={() => handleOAuthConnect(tool.id)}
+                              variant={isConnected ? "outline" : "default"}
+                              disabled={isConnecting}
+                              className="h-7 text-[10px] uppercase font-bold"
                             >
-                              Disconnect
+                              {isConnecting ? (
+                                <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                              ) : null}
+                              {isConnected ? 'Reconnect' : 'Authenticate'}
                             </Button>
-                          )}
-                          <Button
-                            onClick={() => handleOAuthConnect(tool.id)}
-                            variant={isConnected ? "outline" : "default"}
-                            disabled={isConnecting}
-                          >
-                            {isConnecting ? (
-                              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                            ) : null}
-                            {isConnected ? 'Reconnect' : 'Connect with Nylas'}
-                          </Button>
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                      )}
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
-          
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-            <div className="flex justify-end space-x-3">
-              <Button variant="outline" onClick={onClose}>
-                Close
-              </Button>
-              <Button onClick={onClose}>
-                Save Settings
-              </Button>
-            </div>
-          </div>
+        </div>
+        
+        <div className="p-4 border-t border-white/5 bg-black/40 flex justify-end space-x-3 shrink-0">
+          <Button variant="ghost" onClick={onClose} className="text-xs font-mono">
+            [CANCEL]
+          </Button>
+          <Button onClick={onClose} className="text-xs font-bold font-mono bg-primary hover:bg-primary/90 text-primary-foreground">
+            [CONFIRM CONFIGURATION]
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

@@ -2,8 +2,10 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Github, Calendar, Mail } from 'lucide-react';
+import { RefreshCw, Github, Calendar, Mail, CheckCircle2, WifiOff, AlertCircle } from 'lucide-react';
 import { ToolStatus } from '@/lib/types';
+import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 interface StatusBarProps {
   toolStatus: Record<string, ToolStatus>;
@@ -16,58 +18,72 @@ const toolIcons = {
   calendar: Calendar,
 };
 
-const statusColors = {
-  connected: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
-  disconnected: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-  syncing: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-950 dark:text-yellow-300',
-  error: 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300',
-};
-
 export function StatusBar({ toolStatus }: StatusBarProps) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const handleRefresh = () => {
+    setIsRefreshing(true);
     window.location.reload();
   };
 
+  const getStatusColor = (status: 'connected' | 'disconnected' | 'error' | 'syncing') => {
+    switch (status) {
+      case 'connected': return 'text-neon-green bg-neon-green/10 border-neon-green/30';
+      case 'disconnected': return 'text-slate-400 bg-slate-400/10 border-slate-400/30';
+      case 'error': return 'text-neon-red bg-neon-red/10 border-neon-red/30';
+      case 'syncing': return 'text-neon-amber bg-neon-amber/10 border-neon-amber/30';
+      default: return 'text-slate-400';
+    }
+  };
+
+  const getStatusIcon = (status: 'connected' | 'disconnected' | 'error' | 'syncing') => {
+    switch (status) {
+      case 'connected': return <CheckCircle2 className="w-3 h-3" />;
+      case 'disconnected': return <WifiOff className="w-3 h-3" />;
+      case 'error': return <AlertCircle className="w-3 h-3" />;
+      case 'syncing': return <RefreshCw className="w-3 h-3 animate-spin" />;
+      default: return <WifiOff className="w-3 h-3" />;
+    }
+  };
+
   return (
-    <div className="fixed bottom-6 left-6 right-6 lg:left-auto lg:right-6 lg:w-auto">
-      <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-4">
-        <div className="flex items-center justify-between space-x-4">
-          <div className="flex items-center space-x-3">
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Tool Status:
-            </span>
-            
-            <div className="flex items-center space-x-2">
-              {Object.entries(toolStatus).map(([tool, status]) => {
-                const Icon = toolIcons[tool as keyof typeof toolIcons];
-                return (
-                  <div key={tool} className="flex items-center space-x-1">
-                    <Icon className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-                    <Badge 
-                      variant="outline"
-                      className={`text-xs ${statusColors[status.status as keyof typeof statusColors]}`}
-                    >
-                      {status.status}
-                    </Badge>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          
-          <Button 
-            variant="ghost" 
-            size="sm"
-            onClick={handleRefresh}
-            className="shrink-0"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-        </div>
+    <div className="fixed bottom-0 left-0 w-full h-8 bg-black/80 backdrop-blur-md border-t border-white/10 flex items-center justify-between px-4 z-50">
+      <div className="flex items-center space-x-4">
+        <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider hidden sm:inline-block">
+          System Status:
+        </span>
         
-        <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-          Last sync: {new Date().toLocaleTimeString()}
+        <div className="flex items-center space-x-2">
+          {Object.entries(toolStatus).map(([tool, status]) => (
+            <div 
+              key={tool} 
+              className={cn(
+                "flex items-center space-x-1.5 px-2 py-0.5 rounded text-[10px] font-mono border transition-all",
+                getStatusColor(status.status as any)
+              )}
+            >
+              {getStatusIcon(status.status as any)}
+              <span className="capitalize">{tool}</span>
+            </div>
+          ))}
         </div>
+      </div>
+
+      <div className="flex items-center space-x-4">
+        <span className="text-[10px] font-mono text-slate-500 hidden sm:inline-block">
+          Last Sync: {new Date().toLocaleTimeString()}
+        </span>
+        
+        <button 
+          onClick={handleRefresh}
+          className={cn(
+            "text-primary hover:text-primary-glow transition-colors p-1",
+            isRefreshing && "animate-spin"
+          )}
+          title="Refresh Status"
+        >
+          <RefreshCw className="w-3 h-3" />
+        </button>
       </div>
     </div>
   );

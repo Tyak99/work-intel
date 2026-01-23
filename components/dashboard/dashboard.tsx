@@ -67,10 +67,13 @@ export function Dashboard() {
   // Show loading state while checking auth
   if (isLoadingUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-          <p className="text-slate-600 dark:text-slate-400">Loading...</p>
+          <div className="relative">
+            <div className="absolute -inset-1 rounded-full bg-primary/20 blur animate-pulse"></div>
+            <div className="relative h-12 w-12 rounded-full border-2 border-primary/50 border-t-transparent animate-spin"></div>
+          </div>
+          <p className="font-mono text-sm text-primary animate-pulse tracking-widest uppercase">Initializing Command Center...</p>
         </div>
       </div>
     );
@@ -80,32 +83,38 @@ export function Dashboard() {
   // But we show a fallback just in case
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <p className="text-slate-600 dark:text-slate-400">Redirecting to login...</p>
+          <p className="text-muted-foreground font-mono">Redirecting to login...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800">
-      <div className="container mx-auto px-6 py-8">
-        <Header 
-          onGenerateBrief={generateDailyBrief}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          isGenerating={isGeneratingBrief}
-        />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-          <div className="lg:col-span-2">
+    <div className="min-h-screen bg-background text-foreground pb-12 font-sans relative overflow-x-hidden">
+      <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none z-0" />
+      <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-[128px] pointer-events-none z-0 animate-pulse-glow" />
+      <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-[128px] pointer-events-none z-0 animate-pulse-glow" style={{ animationDelay: '1s' }} />
+      
+      <Header 
+        onGenerateBrief={generateDailyBrief}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        isGenerating={isGeneratingBrief}
+      />
+      
+      <main className="container mx-auto px-4 pt-6 pb-20 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-6rem)]">
+          {/* Brief Column - Main Feed */}
+          <div className="lg:col-span-8 h-full overflow-y-auto custom-scrollbar pr-2 pb-10">
             <BriefSection 
               brief={brief}
               isGenerating={isGeneratingBrief}
             />
           </div>
           
-          <div>
+          {/* Tasks Column - Sidebar */}
+          <div className="lg:col-span-4 h-full overflow-hidden pb-10">
             <TodoSection 
               todos={todos}
               onToggleTodo={toggleTodo}
@@ -114,14 +123,14 @@ export function Dashboard() {
             />
           </div>
         </div>
-
-        <StatusBar toolStatus={toolStatus} />
-        
-        <SettingsModal 
-          isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
-        />
-      </div>
+      </main>
+      
+      <StatusBar toolStatus={toolStatus} />
+      
+      <SettingsModal 
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 }

@@ -1,8 +1,8 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Sparkles, Settings, Brain, LogOut, User } from 'lucide-react';
-import { useDashboardStore, User as UserType } from '@/lib/store';
+import { Sparkles, Settings, Brain, LogOut, User, Activity } from 'lucide-react';
+import { useDashboardStore } from '@/lib/store';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface HeaderProps {
   onGenerateBrief: () => void;
@@ -22,80 +23,87 @@ export function Header({ onGenerateBrief, onOpenSettings, isGenerating }: Header
   const { user, logout } = useDashboardStore();
 
   return (
-    <header className="flex items-center justify-between">
-      <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-          <Brain className="w-6 h-6 text-white" />
+    <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-xl shadow-lg">
+      <div className="container flex h-16 items-center justify-between px-4">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="absolute -inset-1 bg-primary/20 rounded-full blur-sm animate-pulse"></div>
+            <div className="relative bg-background border border-primary/30 p-1.5 rounded-lg">
+              <Activity className="h-6 w-6 text-primary" />
+            </div>
+          </div>
+          <div>
+            <h1 className="text-lg font-display font-bold tracking-wider text-foreground">
+              WORK<span className="text-primary">INTEL</span>
+            </h1>
+            <p className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase">
+              Mission Control
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-            Work Intelligence
-          </h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            AI-powered productivity command center
-          </p>
-        </div>
-      </div>
 
-      <div className="flex items-center space-x-3">
-        <Button
-          onClick={onGenerateBrief}
-          disabled={isGenerating}
-          size="lg"
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg transition-all duration-200 hover:shadow-xl"
-        >
-          {isGenerating ? (
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Generating...</span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <Sparkles className="w-4 h-4" />
-              <span>Generate Brief</span>
-            </div>
+        <div className="flex items-center gap-4">
+          <Button
+            onClick={onGenerateBrief}
+            disabled={isGenerating}
+            className="hidden md:flex bg-primary/20 text-primary border-primary/50 hover:bg-primary/30 shadow-[0_0_15px_rgba(6,182,212,0.15)] font-mono text-xs uppercase tracking-wider font-bold h-9"
+          >
+            {isGenerating ? (
+              <>
+                <Sparkles className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Generate Brief
+              </>
+            )}
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onOpenSettings}
+            className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-9 w-9 rounded-full ring-2 ring-white/10 hover:ring-primary/50 transition-all p-0 overflow-hidden">
+                  <Avatar className="h-9 w-9">
+                    <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                      {user.displayName?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 glass-panel border-white/10 text-foreground" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none font-display tracking-wide">{user.displayName || 'Agent'}</p>
+                    <p className="text-xs leading-none text-muted-foreground font-mono">
+                      {user.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuItem onClick={onOpenSettings} className="focus:bg-primary/10 focus:text-primary cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  <span>Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/10" />
+                <DropdownMenuItem onClick={logout} className="focus:bg-destructive/10 focus:text-destructive cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
-        </Button>
-
-        <Button
-          variant="outline"
-          size="lg"
-          onClick={onOpenSettings}
-          className="border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-        >
-          <Settings className="w-4 h-4 mr-2" />
-          Settings
-        </Button>
-
-        {user && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
-              >
-                <User className="w-4 h-4 mr-2" />
-                <span className="max-w-[120px] truncate">
-                  {user.displayName || user.email.split('@')[0]}
-                </span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
-                <div className="flex flex-col">
-                  <span className="font-medium">{user.displayName || 'User'}</span>
-                  <span className="text-xs text-slate-500 truncate">{user.email}</span>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={logout} className="text-red-600 cursor-pointer">
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        </div>
       </div>
     </header>
   );

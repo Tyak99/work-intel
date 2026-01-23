@@ -2,8 +2,9 @@
 
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Sparkles, Shield, Zap } from 'lucide-react';
+import { Mail, Sparkles, Shield, Zap, Activity } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,75 +24,107 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 flex items-center justify-center px-4">
-      <Toaster position="top-right" />
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background scanline effect */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent animate-scan-line opacity-50 pointer-events-none" />
 
-      <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sparkles className="h-10 w-10 text-indigo-500" />
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Work Intel
-            </h1>
+      {/* Ambient glow blobs */}
+      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px] animate-pulse-glow" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: '2s' }} />
+
+      <Toaster 
+        position="top-right" 
+        toastOptions={{
+          style: {
+            background: '#0f172a',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(10px)',
+          }
+        }}
+      />
+
+      <div className="max-w-md w-full relative z-10">
+        <div className="mb-10 text-center relative group">
+          <div className="inline-flex items-center justify-center p-4 rounded-2xl bg-black/40 border border-primary/20 shadow-glow-md mb-6 relative overflow-hidden group-hover:border-primary/40 transition-colors">
+            <div className="absolute inset-0 bg-primary/10 animate-pulse" />
+            <Activity className="h-10 w-10 text-primary relative z-10" />
           </div>
-          <p className="text-slate-600 dark:text-slate-400 text-lg">
-            Your AI-powered work intelligence dashboard
+          
+          <h1 className="text-4xl font-display font-bold text-foreground mb-2 tracking-wide uppercase">
+            Work<span className="text-primary text-glow">Intel</span>
+          </h1>
+          <p className="text-sm font-mono text-muted-foreground uppercase tracking-widest">
+            Mission Control System
           </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-8">
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <Zap className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h3 className="font-medium text-slate-900 dark:text-white">Daily AI Briefs</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Get synthesized insights from GitHub, Jira, Gmail, and Calendar
-                  </p>
+        <div className="glass-panel border-white/10 p-1 relative overflow-hidden rounded-2xl">
+          <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+          
+          <div className="bg-black/40 rounded-xl p-8 backdrop-blur-sm border border-white/5">
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-start gap-4 group">
+                  <div className="p-2 rounded bg-amber-500/10 text-amber-500 border border-amber-500/20 group-hover:border-amber-500/40 transition-colors">
+                    <Zap className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-sm text-foreground uppercase tracking-wide">Daily Intelligence</h3>
+                    <p className="text-xs text-muted-foreground font-mono mt-1">
+                      Synthesized data streams from JIRA, GitHub & Comms
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 group">
+                  <div className="p-2 rounded bg-purple-500/10 text-purple-500 border border-purple-500/20 group-hover:border-purple-500/40 transition-colors">
+                    <Sparkles className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-sm text-foreground uppercase tracking-wide">AI Protocols</h3>
+                    <p className="text-xs text-muted-foreground font-mono mt-1">
+                      Automated drafts for comms and code review
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4 group">
+                  <div className="p-2 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 group-hover:border-emerald-500/40 transition-colors">
+                    <Shield className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-sm text-foreground uppercase tracking-wide">Secure Access</h3>
+                    <p className="text-xs text-muted-foreground font-mono mt-1">
+                      Read-only encrypted connection. Private data handling.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-3">
-                <Sparkles className="h-5 w-5 text-purple-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h3 className="font-medium text-slate-900 dark:text-white">Smart Actions</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    AI-drafted email replies, PR nudges, and meeting prep
-                  </p>
-                </div>
+              <div className="pt-6 border-t border-white/10">
+                <Button
+                  onClick={handleSignIn}
+                  className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-display font-bold tracking-wider uppercase shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transition-all"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Initialize Session
+                </Button>
+
+                <p className="text-[10px] text-center text-slate-500 font-mono mt-4 uppercase">
+                  Authorization Required • Level 1 Clearance
+                </p>
               </div>
-
-              <div className="flex items-start gap-3">
-                <Shield className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <h3 className="font-medium text-slate-900 dark:text-white">Secure & Private</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Read-only access to your accounts, data stays private
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-              <button
-                onClick={handleSignIn}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-3 px-4 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
-              >
-                <Mail className="h-5 w-5" />
-                Sign in with Gmail
-              </button>
-
-              <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-4">
-                By signing in, you agree to grant read-only access to your Gmail and Calendar
-              </p>
             </div>
           </div>
         </div>
 
-        <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
-          No account needed - just sign in with Google
-        </p>
+        <div className="mt-8 text-center">
+          <p className="text-[10px] text-slate-600 font-mono uppercase tracking-widest">
+            System Version 2.0.4 • Status: Nominal
+          </p>
+        </div>
       </div>
     </div>
   );
