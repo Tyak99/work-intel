@@ -28,55 +28,63 @@ const sectionIcons = {
   notes: Sparkles,
 };
 
-// Updated color system - using CSS variables and tailwind classes for neon effects
+// Section color system - using semantic CSS variables for theme support
 const sectionStyles = {
   focus: {
-    border: 'border-l-neon-pink', 
-    icon: 'text-neon-pink',
-    bg: 'bg-neon-pink/5 hover:bg-neon-pink/10',
-    glow: 'shadow-[inset_0_0_20px_rgba(236,72,153,0.05)]'
+    border: 'border-l-section-focus',
+    icon: 'text-section-focus',
+    iconBg: 'bg-section-focus-muted',
+    bg: 'bg-section-focus-muted hover:bg-section-focus/20',
+    glow: 'shadow-[inset_0_0_20px_hsl(var(--section-focus)/0.05)]'
   },
   meetings: {
-    border: 'border-l-neon-blue',
-    icon: 'text-neon-blue',
-    bg: 'bg-neon-blue/5 hover:bg-neon-blue/10',
-    glow: 'shadow-[inset_0_0_20px_rgba(59,130,246,0.05)]'
+    border: 'border-l-section-meetings',
+    icon: 'text-section-meetings',
+    iconBg: 'bg-section-meetings-muted',
+    bg: 'bg-section-meetings-muted hover:bg-section-meetings/20',
+    glow: 'shadow-[inset_0_0_20px_hsl(var(--section-meetings)/0.05)]'
   },
   prsToReview: {
-    border: 'border-l-neon-cyan',
-    icon: 'text-neon-cyan',
-    bg: 'bg-neon-cyan/5 hover:bg-neon-cyan/10',
-    glow: 'shadow-[inset_0_0_20px_rgba(6,182,212,0.05)]'
+    border: 'border-l-section-review',
+    icon: 'text-section-review',
+    iconBg: 'bg-section-review-muted',
+    bg: 'bg-section-review-muted hover:bg-section-review/20',
+    glow: 'shadow-[inset_0_0_20px_hsl(var(--section-review)/0.05)]'
   },
   myPrsWaiting: {
-    border: 'border-l-neon-purple',
-    icon: 'text-neon-purple',
-    bg: 'bg-neon-purple/5 hover:bg-neon-purple/10',
-    glow: 'shadow-[inset_0_0_20px_rgba(139,92,246,0.05)]'
+    border: 'border-l-section-prs',
+    icon: 'text-section-prs',
+    iconBg: 'bg-section-prs-muted',
+    bg: 'bg-section-prs-muted hover:bg-section-prs/20',
+    glow: 'shadow-[inset_0_0_20px_hsl(var(--section-prs)/0.05)]'
   },
   emails: {
-    border: 'border-l-neon-green',
-    icon: 'text-neon-green',
-    bg: 'bg-neon-green/5 hover:bg-neon-green/10',
-    glow: 'shadow-[inset_0_0_20px_rgba(16,185,129,0.05)]'
+    border: 'border-l-section-email',
+    icon: 'text-section-email',
+    iconBg: 'bg-section-email-muted',
+    bg: 'bg-section-email-muted hover:bg-section-email/20',
+    glow: 'shadow-[inset_0_0_20px_hsl(var(--section-email)/0.05)]'
   },
   jira: {
-    border: 'border-l-neon-amber',
-    icon: 'text-neon-amber',
-    bg: 'bg-neon-amber/5 hover:bg-neon-amber/10',
-    glow: 'shadow-[inset_0_0_20px_rgba(245,158,11,0.05)]'
+    border: 'border-l-section-tasks',
+    icon: 'text-section-tasks',
+    iconBg: 'bg-section-tasks-muted',
+    bg: 'bg-section-tasks-muted hover:bg-section-tasks/20',
+    glow: 'shadow-[inset_0_0_20px_hsl(var(--section-tasks)/0.05)]'
   },
   alerts: {
-    border: 'border-l-neon-red',
-    icon: 'text-neon-red',
-    bg: 'bg-neon-red/5 hover:bg-neon-red/10',
-    glow: 'shadow-[inset_0_0_20px_rgba(239,68,68,0.05)]'
+    border: 'border-l-section-alerts',
+    icon: 'text-section-alerts',
+    iconBg: 'bg-section-alerts-muted',
+    bg: 'bg-section-alerts-muted hover:bg-section-alerts/20',
+    glow: 'shadow-[inset_0_0_20px_hsl(var(--section-alerts)/0.05)]'
   },
   notes: {
-    border: 'border-l-slate-400',
-    icon: 'text-slate-400',
-    bg: 'bg-slate-500/5 hover:bg-slate-500/10',
-    glow: 'shadow-[inset_0_0_20px_rgba(148,163,184,0.05)]'
+    border: 'border-l-section-notes',
+    icon: 'text-section-notes',
+    iconBg: 'bg-section-notes-muted',
+    bg: 'bg-section-notes-muted hover:bg-section-notes/20',
+    glow: 'shadow-[inset_0_0_20px_hsl(var(--section-notes)/0.05)]'
   },
 };
 
@@ -145,19 +153,19 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
         content: brief.topFocus && brief.topFocus.length > 0 ? (
           <div className="space-y-3">
             {brief.topFocus.map(item => (
-              <div key={item.rank} className="p-4 bg-background/40 backdrop-blur-sm rounded-lg border border-neon-pink/20 hover:border-neon-pink/40 transition-colors group">
+              <div key={item.rank} className="p-4 bg-background/40 backdrop-blur-sm rounded-lg border border-section-focus/20 hover:border-section-focus/40 transition-colors group">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-neon-pink/20 text-[10px] font-bold text-neon-pink ring-1 ring-neon-pink/50">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-section-focus/20 text-[10px] font-bold text-section-focus ring-1 ring-section-focus/50">
                       {item.rank}
                     </span>
-                    <Badge variant="outline" className="text-[10px] border-neon-pink/30 text-neon-pink bg-neon-pink/5">
+                    <Badge variant="outline" className="text-[10px] border-section-focus/30 text-section-focus bg-section-focus-muted">
                       {t('priorityTarget')}
                     </Badge>
                   </div>
                   <Badge variant="secondary" className="text-[10px] font-mono">{item.relatedItemId}</Badge>
                 </div>
-                <h4 className="font-medium text-sm text-foreground group-hover:text-neon-pink transition-colors">{item.title}</h4>
+                <h4 className="font-medium text-sm text-foreground group-hover:text-section-focus transition-colors">{item.title}</h4>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{item.reason}</p>
               </div>
             ))}
@@ -276,7 +284,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
       <Card className="glass-panel border-border">
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">
           <div className="relative mb-6 group">
-            {hasGlowEffects && <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>}
+            {hasGlowEffects && <div className="absolute -inset-1 bg-gradient-to-r from-primary to-secondary rounded-full blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>}
             <div className="relative w-24 h-24 bg-card rounded-full flex items-center justify-center border border-border">
               <Sparkles className="w-10 h-10 text-primary animate-pulse" />
             </div>
@@ -293,8 +301,8 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
   }
 
   return (
-    <Card className="glass-panel border-white/10">
-      <CardHeader className="border-b border-white/5 bg-black/20">
+    <Card className="glass-panel border-border">
+      <CardHeader className="border-b border-border bg-overlay-light">
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-xl flex items-center gap-2">
@@ -355,9 +363,9 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
               return items.length > 0 ? (
                 <div className="space-y-2">
                   {items.map((item, index) => (
-                    <div key={`${item.sourceId}-${index}`} className="p-3 bg-background/40 backdrop-blur-sm rounded-lg border border-white/10">
+                    <div key={`${item.sourceId}-${index}`} className="p-3 bg-background/40 backdrop-blur-sm rounded-lg border border-border">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-sm font-mono text-slate-300">{item.title}</h4>
+                        <h4 className="font-medium text-sm font-mono text-foreground">{item.title}</h4>
                         <Badge variant="outline" className="text-[10px]">{item.priority}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">{item.summary}</p>
@@ -396,11 +404,11 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
                 className="w-full p-4 flex items-center justify-between group"
               >
                 <div className="flex items-center space-x-3">
-                  <div className={cn("p-2 rounded bg-black/20 ring-1 ring-white/5", style.icon)}>
+                  <div className={cn("p-2 rounded ring-1 ring-border", style.iconBg, style.icon)}>
                     <Icon className="w-4 h-4" />
                   </div>
                   <h3 className="font-display font-medium text-left tracking-wide text-sm">{section.title}</h3>
-                  <Badge variant="secondary" className="text-[10px] bg-black/40 border-white/10 font-mono">
+                  <Badge variant="secondary" className="text-[10px] bg-muted text-muted-foreground border-border font-mono">
                     {section.count.toString().padStart(2, '0')}
                   </Badge>
                 </div>
@@ -413,7 +421,7 @@ export function BriefSection({ brief, isGenerating }: BriefSectionProps) {
 
               {isExpanded && (
                 <div className={cn("px-4 pb-4 animate-accordion-down overflow-hidden")}>
-                  <Separator className="mb-4 bg-white/5" />
+                  <Separator className="mb-4 bg-border" />
                   {renderSectionContent()}
                 </div>
               )}
@@ -476,7 +484,7 @@ function renderMeetings(
                 )}
               </h4>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] border-blue-500/30 text-blue-500 bg-blue-500/10">
+                <Badge variant="outline" className="text-[10px] border-section-meetings/30 text-section-meetings bg-section-meetings-muted">
                   <Clock className="w-3 h-3 mr-1" />
                   {meeting.time}
                 </Badge>
@@ -484,7 +492,7 @@ function renderMeetings(
             </div>
             {meeting.prepNeeded && (
               <div className="mt-2 flex items-start gap-2">
-                 <Badge variant="secondary" className="text-[10px] px-1 h-5 mt-0.5 bg-blue-500/10 text-blue-500">{t('prepNotesLabel')}</Badge>
+                 <Badge variant="secondary" className="text-[10px] px-1 h-5 mt-0.5 bg-section-meetings-muted text-section-meetings">{t('prepNotesLabel')}</Badge>
                  <p className="text-xs text-muted-foreground">{meeting.prepNeeded}</p>
               </div>
             )}

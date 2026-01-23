@@ -28,11 +28,11 @@ export function StatusBar({ toolStatus }: StatusBarProps) {
 
   const getStatusColor = (status: 'connected' | 'disconnected' | 'error' | 'syncing') => {
     switch (status) {
-      case 'connected': return 'text-neon-green bg-neon-green/10 border-neon-green/30';
-      case 'disconnected': return 'text-slate-400 bg-slate-400/10 border-slate-400/30';
-      case 'error': return 'text-neon-red bg-neon-red/10 border-neon-red/30';
-      case 'syncing': return 'text-neon-amber bg-neon-amber/10 border-neon-amber/30';
-      default: return 'text-slate-400';
+      case 'connected': return 'text-status-success bg-status-success-muted border-status-success/30';
+      case 'disconnected': return 'text-muted-foreground bg-muted/50 border-muted-foreground/30';
+      case 'error': return 'text-status-error bg-status-error-muted border-status-error/30';
+      case 'syncing': return 'text-status-warning bg-status-warning-muted border-status-warning/30';
+      default: return 'text-muted-foreground';
     }
   };
 
@@ -47,7 +47,7 @@ export function StatusBar({ toolStatus }: StatusBarProps) {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 w-full h-8 bg-black/80 backdrop-blur-md border-t border-white/10 flex items-center justify-between px-4 z-50">
+    <div className="fixed bottom-0 left-0 w-full h-8 bg-card/95 backdrop-blur-md border-t border-border flex items-center justify-between px-4 z-50">
       <div className="flex items-center space-x-4">
         <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider hidden sm:inline-block">
           System Status:
@@ -70,7 +70,7 @@ export function StatusBar({ toolStatus }: StatusBarProps) {
       </div>
 
       <div className="flex items-center space-x-4">
-        <span className="text-[10px] font-mono text-slate-500 hidden sm:inline-block">
+        <span className="text-[10px] font-mono text-muted-foreground hidden sm:inline-block">
           Last Sync: {new Date().toLocaleTimeString()}
         </span>
         

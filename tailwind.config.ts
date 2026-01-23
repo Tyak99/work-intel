@@ -70,7 +70,53 @@ const config: Config = {
           pink: 'hsl(var(--neon-pink))',
           amber: 'hsl(var(--neon-amber))',
           red: 'hsl(var(--neon-red))',
-        }
+        },
+
+        // Semantic overlays
+        overlay: 'hsl(var(--overlay))',
+        'overlay-light': 'hsl(var(--overlay-light))',
+
+        // Surface
+        'surface-elevated': 'hsl(var(--surface-elevated))',
+
+        // Borders
+        'border-subtle': 'hsl(var(--border-subtle))',
+
+        // Status colors
+        'status-success': 'hsl(var(--status-success))',
+        'status-success-muted': 'hsl(var(--status-success-muted))',
+        'status-warning': 'hsl(var(--status-warning))',
+        'status-warning-muted': 'hsl(var(--status-warning-muted))',
+        'status-error': 'hsl(var(--status-error))',
+        'status-error-muted': 'hsl(var(--status-error-muted))',
+        'status-info': 'hsl(var(--status-info))',
+        'status-info-muted': 'hsl(var(--status-info-muted))',
+
+        // Action type colors
+        'action-email': 'hsl(var(--action-email))',
+        'action-email-muted': 'hsl(var(--action-email-muted))',
+        'action-pr': 'hsl(var(--action-pr))',
+        'action-pr-muted': 'hsl(var(--action-pr-muted))',
+        'action-meeting': 'hsl(var(--action-meeting))',
+        'action-meeting-muted': 'hsl(var(--action-meeting-muted))',
+
+        // Section colors for brief sections
+        'section-focus': 'hsl(var(--section-focus))',
+        'section-focus-muted': 'hsl(var(--section-focus-muted))',
+        'section-meetings': 'hsl(var(--section-meetings))',
+        'section-meetings-muted': 'hsl(var(--section-meetings-muted))',
+        'section-review': 'hsl(var(--section-review))',
+        'section-review-muted': 'hsl(var(--section-review-muted))',
+        'section-prs': 'hsl(var(--section-prs))',
+        'section-prs-muted': 'hsl(var(--section-prs-muted))',
+        'section-email': 'hsl(var(--section-email))',
+        'section-email-muted': 'hsl(var(--section-email-muted))',
+        'section-tasks': 'hsl(var(--section-tasks))',
+        'section-tasks-muted': 'hsl(var(--section-tasks-muted))',
+        'section-alerts': 'hsl(var(--section-alerts))',
+        'section-alerts-muted': 'hsl(var(--section-alerts-muted))',
+        'section-notes': 'hsl(var(--section-notes))',
+        'section-notes-muted': 'hsl(var(--section-notes-muted))',
       },
       backgroundImage: {
         'grid-pattern': "linear-gradient(to right, #1e293b 1px, transparent 1px), linear-gradient(to bottom, #1e293b 1px, transparent 1px)",

@@ -149,7 +149,7 @@ export const themes: Record<string, ThemeConfig> = {
     fontStyle: 'clean',
     labels: {
       // App identity
-      appName: "Work Intel",
+      appName: "WorkIntel",
       appTagline: "Your productivity dashboard",
 
       // Brief section
@@ -202,7 +202,7 @@ export const themes: Record<string, ThemeConfig> = {
       // Login
       loginButton: "Sign in with Gmail",
       loginDisclaimer: "We only request read access to your data.",
-      loginFooter: "Work Intel • Your AI productivity assistant",
+      loginFooter: "WorkIntel • Your AI productivity assistant",
 
       // Priority badge
       priorityTarget: "High Priority"

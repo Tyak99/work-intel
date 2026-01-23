@@ -60,9 +60,9 @@ const sourceIcons = {
 };
 
 const priorityColors = {
-  critical: 'text-red-400 border-red-400/30 bg-red-400/10',
-  high: 'text-orange-400 border-orange-400/30 bg-orange-400/10',
-  medium: 'text-blue-400 border-blue-400/30 bg-blue-400/10',
+  critical: 'text-status-error border-status-error/30 bg-status-error-muted',
+  high: 'text-status-warning border-status-warning/30 bg-status-warning-muted',
+  medium: 'text-status-info border-status-info/30 bg-status-info-muted',
   low: 'text-muted-foreground border-muted-foreground/30 bg-muted/30',
 };
 
@@ -70,17 +70,17 @@ const smartTodoTypeConfig = {
   ai_email_reply: {
     icon: Mail,
     label: 'Email Reply',
-    color: 'border-emerald-400/30 text-emerald-400 bg-emerald-400/10',
+    color: 'border-action-email/30 text-action-email bg-action-email-muted',
   },
   ai_pr_nudge: {
     icon: GitPullRequest,
     label: 'PR Nudge',
-    color: 'border-violet-400/30 text-violet-400 bg-violet-400/10',
+    color: 'border-action-pr/30 text-action-pr bg-action-pr-muted',
   },
   ai_meeting_prep: {
     icon: Calendar,
     label: 'Meeting Prep',
-    color: 'border-blue-400/30 text-blue-400 bg-blue-400/10',
+    color: 'border-action-meeting/30 text-action-meeting bg-action-meeting-muted',
   },
   manual: {
     icon: Plus,
@@ -331,7 +331,7 @@ function SmartTodoItem({
             <h4
               className={cn(
                 "font-medium text-sm transition-colors",
-                isDone ? "text-muted-foreground line-through decoration-slate-600" : "text-foreground"
+                isDone ? "text-muted-foreground line-through decoration-muted-foreground" : "text-foreground"
               )}
             >
               {todo.title}
@@ -352,19 +352,19 @@ function SmartTodoItem({
             )}
             {/* Status badges */}
             {isDone && (
-              <Badge variant="secondary" className="text-[10px] h-5 bg-green-500/10 text-green-400 border-green-500/20">
+              <Badge variant="secondary" className="text-[10px] h-5 bg-status-success-muted text-status-success border-status-success/20">
                 <Check className="w-3 h-3 mr-1" />
                 DONE
               </Badge>
             )}
             {isReady && !isDone && (
-              <Badge variant="secondary" className="text-[10px] h-5 bg-blue-500/10 text-blue-400 border-blue-500/20">
+              <Badge variant="secondary" className="text-[10px] h-5 bg-status-info-muted text-status-info border-status-info/20">
                 <Check className="w-3 h-3 mr-1" />
                 READY
               </Badge>
             )}
             {isPreparingStatus && (
-              <Badge variant="secondary" className="text-[10px] h-5 bg-amber-500/10 text-amber-400 border-amber-500/20">
+              <Badge variant="secondary" className="text-[10px] h-5 bg-status-warning-muted text-status-warning border-status-warning/20">
                 <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                 PREPARING...
               </Badge>
@@ -545,18 +545,18 @@ function ManualSmartTodoItem({ todo, onMarkDone }: ManualSmartTodoItemProps) {
           checked={isDone}
           onCheckedChange={() => !isDone && onMarkDone()}
           disabled={isDone}
-          className="border-slate-500 data-[state=checked]:bg-slate-500 data-[state=checked]:border-slate-500"
+          className="border-muted-foreground data-[state=checked]:bg-muted-foreground data-[state=checked]:border-muted-foreground"
         />
         <span
           className={cn(
             "flex-1 text-sm transition-colors",
-            isDone ? "line-through text-muted-foreground decoration-slate-600" : "text-foreground"
+            isDone ? "line-through text-muted-foreground decoration-muted-foreground" : "text-foreground"
           )}
         >
           {todo.title}
         </span>
         {isDone && (
-          <Badge variant="secondary" className="text-[10px] h-5 bg-green-500/10 text-green-400 border-green-500/20 font-mono">
+          <Badge variant="secondary" className="text-[10px] h-5 bg-status-success-muted text-status-success border-status-success/20 font-mono">
             <Check className="w-3 h-3 mr-1" />
             DONE
           </Badge>

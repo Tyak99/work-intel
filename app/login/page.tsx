@@ -37,7 +37,7 @@ export default function LoginPage() {
           {hasGlowEffects && (
             <>
               <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[100px] animate-pulse-glow" />
-              <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: '2s' }} />
+              <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-secondary/10 rounded-full blur-[100px] animate-pulse-glow" style={{ animationDelay: '2s' }} />
             </>
           )}
         </>
@@ -46,15 +46,11 @@ export default function LoginPage() {
       <Toaster
         position="top-right"
         toastOptions={{
-          style: isDark ? {
-            background: '#0f172a',
-            color: '#fff',
-            border: '1px solid rgba(255,255,255,0.1)',
-            backdropFilter: 'blur(10px)',
-          } : {
-            background: '#fff',
-            color: '#0f172a',
-            border: '1px solid #e2e8f0',
+          style: {
+            background: 'hsl(var(--card))',
+            color: 'hsl(var(--card-foreground))',
+            border: '1px solid hsl(var(--border))',
+            backdropFilter: isDark ? 'blur(10px)' : undefined,
           }
         }}
       />
@@ -85,7 +81,7 @@ export default function LoginPage() {
             <div className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-start gap-4 group">
-                  <div className="p-2 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 group-hover:border-amber-500/40 transition-colors">
+                  <div className="p-2 rounded bg-[hsl(var(--status-warning-muted))] text-[hsl(var(--status-warning))] border border-[hsl(var(--status-warning)/0.2)] group-hover:border-[hsl(var(--status-warning)/0.4)] transition-colors">
                     <Zap className="h-5 w-5" />
                   </div>
                   <div>
@@ -97,7 +93,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="flex items-start gap-4 group">
-                  <div className="p-2 rounded bg-purple-500/10 text-purple-600 border border-purple-500/20 group-hover:border-purple-500/40 transition-colors">
+                  <div className="p-2 rounded bg-[hsl(var(--status-info-muted))] text-[hsl(var(--status-info))] border border-[hsl(var(--status-info)/0.2)] group-hover:border-[hsl(var(--status-info)/0.4)] transition-colors">
                     <Sparkles className="h-5 w-5" />
                   </div>
                   <div>
@@ -109,7 +105,7 @@ export default function LoginPage() {
                 </div>
 
                 <div className="flex items-start gap-4 group">
-                  <div className="p-2 rounded bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 group-hover:border-emerald-500/40 transition-colors">
+                  <div className="p-2 rounded bg-[hsl(var(--status-success-muted))] text-[hsl(var(--status-success))] border border-[hsl(var(--status-success)/0.2)] group-hover:border-[hsl(var(--status-success)/0.4)] transition-colors">
                     <Shield className="h-5 w-5" />
                   </div>
                   <div>
@@ -125,7 +121,7 @@ export default function LoginPage() {
                 <Button
                   onClick={handleSignIn}
                   className={`w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold transition-all ${
-                    hasGlowEffects ? 'shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)]' : 'shadow-md hover:shadow-lg'
+                    hasGlowEffects ? 'shadow-glow-md hover:shadow-glow-lg' : 'shadow-md hover:shadow-lg'
                   }`}
                 >
                   <Mail className="h-4 w-4 mr-2" />

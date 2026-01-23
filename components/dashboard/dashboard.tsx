@@ -8,12 +8,14 @@ import { TodoSection } from './todo-section';
 import { StatusBar } from './status-bar';
 import { SettingsModal } from './settings-modal';
 import { useDashboardStore } from '@/lib/store';
+import { useTheme } from '@/components/theme-provider';
 import toast from 'react-hot-toast';
 import { Loader2 } from 'lucide-react';
 
 export function Dashboard() {
   const router = useRouter();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { t } = useTheme();
   const {
     user,
     isLoadingUser,
@@ -73,7 +75,7 @@ export function Dashboard() {
             <div className="absolute -inset-1 rounded-full bg-primary/20 blur animate-pulse"></div>
             <div className="relative h-12 w-12 rounded-full border-2 border-primary/50 border-t-transparent animate-spin"></div>
           </div>
-          <p className="font-mono text-sm text-primary animate-pulse tracking-widest uppercase">Initializing Command Center...</p>
+          <p className="font-mono text-sm text-primary animate-pulse tracking-widest uppercase">{t('initializing')}</p>
         </div>
       </div>
     );

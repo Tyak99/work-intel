@@ -48,9 +48,9 @@ const typeLabels = {
 };
 
 const typeColors = {
-  email_reply: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
-  pr_nudge: 'bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-200',
-  meeting_prep: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  email_reply: 'bg-action-email-muted text-action-email',
+  pr_nudge: 'bg-action-pr-muted text-action-pr',
+  meeting_prep: 'bg-action-meeting-muted text-action-meeting',
 };
 
 export function SmartActionModal({ open, onClose }: SmartActionModalProps) {
@@ -113,8 +113,8 @@ export function SmartActionModal({ open, onClose }: SmartActionModalProps) {
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-[600px]">
           <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="w-10 h-10 animate-spin text-blue-600 mb-4" />
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+            <p className="text-sm text-muted-foreground">
               {isRegenerating ? 'Regenerating draft...' : 'Preparing your action...'}
             </p>
           </div>
@@ -130,12 +130,12 @@ export function SmartActionModal({ open, onClose }: SmartActionModalProps) {
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
+              <AlertCircle className="w-5 h-5 text-destructive" />
               Error
             </DialogTitle>
           </DialogHeader>
           <div className="py-6">
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <p className="text-sm text-muted-foreground">
               {preparingAction.error || 'An error occurred while preparing the action.'}
             </p>
           </div>
@@ -177,7 +177,7 @@ export function SmartActionModal({ open, onClose }: SmartActionModalProps) {
                   {typeLabel}
                 </Badge>
                 {preparingAction.status === 'ready' && (
-                  <Badge variant="outline" className="text-xs text-green-600">
+                  <Badge variant="outline" className="text-xs text-status-success">
                     <Check className="w-3 h-3 mr-1" />
                     Ready
                   </Badge>
@@ -193,7 +193,7 @@ export function SmartActionModal({ open, onClose }: SmartActionModalProps) {
             <div className="border rounded-lg">
               <button
                 onClick={() => setShowContext(!showContext)}
-                className="w-full p-3 flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                className="w-full p-3 flex items-center justify-between text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
               >
                 <span>Original Context</span>
                 {showContext ? (
@@ -205,8 +205,8 @@ export function SmartActionModal({ open, onClose }: SmartActionModalProps) {
               {showContext && (
                 <div className="px-3 pb-3">
                   <Separator className="mb-3" />
-                  <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-md">
-                    <pre className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap font-mono overflow-auto max-h-48">
+                  <div className="bg-muted p-3 rounded-md">
+                    <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono overflow-auto max-h-48">
                       {formatContext(preparingAction.originalContent)}
                     </pre>
                   </div>
@@ -217,7 +217,7 @@ export function SmartActionModal({ open, onClose }: SmartActionModalProps) {
 
           {/* Draft Content */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <label className="text-sm font-medium text-foreground">
               {preparingAction.type === 'meeting_prep' ? 'Prep Notes' : 'Draft Message'}
             </label>
             <Textarea
@@ -226,7 +226,7 @@ export function SmartActionModal({ open, onClose }: SmartActionModalProps) {
               className="min-h-[200px] font-mono text-sm"
               placeholder="Your draft will appear here..."
             />
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               You can edit the draft before copying. Changes are not saved.
             </p>
           </div>
@@ -236,7 +236,7 @@ export function SmartActionModal({ open, onClose }: SmartActionModalProps) {
             <div className="border rounded-lg">
               <button
                 onClick={() => setShowAlternatives(!showAlternatives)}
-                className="w-full p-3 flex items-center justify-between text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                className="w-full p-3 flex items-center justify-between text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors"
               >
                 <span>Alternative Drafts ({preparingAction.alternativeDrafts.length})</span>
                 {showAlternatives ? (
@@ -252,11 +252,11 @@ export function SmartActionModal({ open, onClose }: SmartActionModalProps) {
                     {preparingAction.alternativeDrafts.map((alt, index) => (
                       <div
                         key={index}
-                        className="p-3 bg-slate-50 dark:bg-slate-900 rounded-md cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        className="p-3 bg-muted rounded-md cursor-pointer hover:bg-muted/80 transition-colors"
                         onClick={() => updatePreparedActionDraft(alt)}
                       >
-                        <p className="text-xs text-slate-500 mb-1">Alternative {index + 1}</p>
-                        <p className="text-sm text-slate-700 dark:text-slate-300 line-clamp-3">
+                        <p className="text-xs text-muted-foreground mb-1">Alternative {index + 1}</p>
+                        <p className="text-sm text-foreground line-clamp-3">
                           {alt}
                         </p>
                       </div>

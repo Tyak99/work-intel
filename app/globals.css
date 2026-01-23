@@ -55,6 +55,52 @@
 
     /* Glow color for effects */
     --glow-color: rgba(6, 182, 212, 0.3);
+
+    /* Overlays */
+    --overlay: 222 47% 4% / 0.8;
+    --overlay-light: 222 47% 4% / 0.4;
+
+    /* Surface */
+    --surface-elevated: 222 47% 10%;
+
+    /* Borders */
+    --border-subtle: 217 33% 20%;
+
+    /* Status colors */
+    --status-success: 158 84% 39%;
+    --status-success-muted: 158 84% 39% / 0.1;
+    --status-warning: 38 92% 50%;
+    --status-warning-muted: 38 92% 50% / 0.1;
+    --status-error: 0 84% 60%;
+    --status-error-muted: 0 84% 60% / 0.1;
+    --status-info: 217 91% 60%;
+    --status-info-muted: 217 91% 60% / 0.1;
+
+    /* Action type colors */
+    --action-email: 158 84% 39%;
+    --action-email-muted: 158 84% 39% / 0.1;
+    --action-pr: 189 94% 43%;
+    --action-pr-muted: 189 94% 43% / 0.1;
+    --action-meeting: 217 91% 60%;
+    --action-meeting-muted: 217 91% 60% / 0.1;
+
+    /* Section colors for brief sections */
+    --section-focus: 330 81% 60%;
+    --section-focus-muted: 330 81% 60% / 0.1;
+    --section-meetings: 217 91% 60%;
+    --section-meetings-muted: 217 91% 60% / 0.1;
+    --section-review: 189 94% 43%;
+    --section-review-muted: 189 94% 43% / 0.1;
+    --section-prs: 261 84% 66%;
+    --section-prs-muted: 261 84% 66% / 0.1;
+    --section-email: 158 84% 39%;
+    --section-email-muted: 158 84% 39% / 0.1;
+    --section-tasks: 38 92% 50%;
+    --section-tasks-muted: 38 92% 50% / 0.1;
+    --section-alerts: 0 84% 60%;
+    --section-alerts-muted: 0 84% 60% / 0.1;
+    --section-notes: 215 20% 65%;
+    --section-notes-muted: 215 20% 65% / 0.1;
   }
 
   /* ============================================
@@ -116,6 +162,52 @@
     /* No glow effects - use shadows instead */
     --glow-color: transparent;
 
+    /* Overlays */
+    --overlay: 215 28% 17% / 0.6;
+    --overlay-light: 220 14% 96% / 0.8;
+
+    /* Surface */
+    --surface-elevated: 0 0% 100%;
+
+    /* Borders */
+    --border-subtle: 220 13% 91%;
+
+    /* Status colors */
+    --status-success: 142 71% 45%;
+    --status-success-muted: 142 76% 95%;
+    --status-warning: 38 92% 50%;
+    --status-warning-muted: 38 92% 95%;
+    --status-error: 0 72% 51%;
+    --status-error-muted: 0 72% 96%;
+    --status-info: 217 91% 60%;
+    --status-info-muted: 217 91% 95%;
+
+    /* Action type colors */
+    --action-email: 160 84% 39%;
+    --action-email-muted: 160 84% 95%;
+    --action-pr: 189 94% 35%;
+    --action-pr-muted: 189 94% 95%;
+    --action-meeting: 217 91% 60%;
+    --action-meeting-muted: 217 91% 95%;
+
+    /* Section colors for brief sections */
+    --section-focus: 340 82% 52%;
+    --section-focus-muted: 340 82% 97%;
+    --section-meetings: 217 91% 60%;
+    --section-meetings-muted: 217 91% 97%;
+    --section-review: 189 94% 35%;
+    --section-review-muted: 189 94% 97%;
+    --section-prs: 262 83% 58%;
+    --section-prs-muted: 262 83% 97%;
+    --section-email: 160 84% 39%;
+    --section-email-muted: 160 84% 96%;
+    --section-tasks: 38 92% 50%;
+    --section-tasks-muted: 38 92% 97%;
+    --section-alerts: 0 72% 51%;
+    --section-alerts-muted: 0 72% 97%;
+    --section-notes: 215 16% 47%;
+    --section-notes-muted: 215 16% 96%;
+
     /* Custom shadows for depth */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
@@ -148,6 +240,52 @@
     --font-display: 'Rajdhani', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
     --glow-color: rgba(6, 182, 212, 0.3);
+
+    /* Overlays */
+    --overlay: 222 47% 4% / 0.8;
+    --overlay-light: 222 47% 4% / 0.4;
+
+    /* Surface */
+    --surface-elevated: 222 47% 10%;
+
+    /* Borders */
+    --border-subtle: 217 33% 20%;
+
+    /* Status colors */
+    --status-success: 158 84% 39%;
+    --status-success-muted: 158 84% 39% / 0.1;
+    --status-warning: 38 92% 50%;
+    --status-warning-muted: 38 92% 50% / 0.1;
+    --status-error: 0 84% 60%;
+    --status-error-muted: 0 84% 60% / 0.1;
+    --status-info: 217 91% 60%;
+    --status-info-muted: 217 91% 60% / 0.1;
+
+    /* Action type colors */
+    --action-email: 158 84% 39%;
+    --action-email-muted: 158 84% 39% / 0.1;
+    --action-pr: 189 94% 43%;
+    --action-pr-muted: 189 94% 43% / 0.1;
+    --action-meeting: 217 91% 60%;
+    --action-meeting-muted: 217 91% 60% / 0.1;
+
+    /* Section colors for brief sections */
+    --section-focus: 330 81% 60%;
+    --section-focus-muted: 330 81% 60% / 0.1;
+    --section-meetings: 217 91% 60%;
+    --section-meetings-muted: 217 91% 60% / 0.1;
+    --section-review: 189 94% 43%;
+    --section-review-muted: 189 94% 43% / 0.1;
+    --section-prs: 261 84% 66%;
+    --section-prs-muted: 261 84% 66% / 0.1;
+    --section-email: 158 84% 39%;
+    --section-email-muted: 158 84% 39% / 0.1;
+    --section-tasks: 38 92% 50%;
+    --section-tasks-muted: 38 92% 50% / 0.1;
+    --section-alerts: 0 84% 60%;
+    --section-alerts-muted: 0 84% 60% / 0.1;
+    --section-notes: 215 20% 65%;
+    --section-notes-muted: 215 20% 65% / 0.1;
   }
 }
 
@@ -280,21 +418,9 @@
   }
 
   /* ============================================
-     ORIGINAL THEME - Comprehensive Overrides
-     Making it beautiful, clean, and professional
+     ORIGINAL THEME - Essential Overrides
+     Only typography, input styling, and browser-level styling
      ============================================ */
-
-  /* --- Remove all glow/shadow effects --- */
-  html.theme-original .shadow-glow-sm,
-  html.theme-original .shadow-glow-md,
-  html.theme-original .shadow-glow-lg {
-    box-shadow: var(--shadow-sm) !important;
-  }
-
-  html.theme-original .animate-pulse-glow,
-  html.theme-original .animate-scan-line {
-    animation: none !important;
-  }
 
   /* --- Typography: Remove futuristic styling --- */
   html.theme-original .font-display {
@@ -318,294 +444,6 @@
     text-transform: none !important;
   }
 
-  /* --- Fix hardcoded dark colors --- */
-
-  /* Black backgrounds → light backgrounds */
-  html.theme-original .bg-black\/20,
-  html.theme-original .bg-black\/30,
-  html.theme-original .bg-black\/40,
-  html.theme-original .bg-black\/50 {
-    background-color: hsl(220 14% 96%) !important;
-  }
-
-  /* Status bar background */
-  html.theme-original .bg-black\/80 {
-    background-color: hsl(220 14% 96%) !important;
-    border-color: hsl(220 13% 91%) !important;
-  }
-
-  /* White borders → proper borders */
-  html.theme-original .border-white\/5,
-  html.theme-original .border-white\/10,
-  html.theme-original .border-white\/20 {
-    border-color: hsl(220 13% 91%) !important;
-  }
-
-  /* Slate text colors → proper readable colors */
-  html.theme-original .text-slate-200,
-  html.theme-original .text-slate-300 {
-    color: hsl(224 71% 4%) !important;
-  }
-
-  html.theme-original .text-slate-400,
-  html.theme-original .text-slate-500 {
-    color: hsl(215 16% 47%) !important;
-  }
-
-  html.theme-original .text-slate-600 {
-    color: hsl(215 19% 35%) !important;
-  }
-
-  /* --- Card and Section Backgrounds --- */
-  html.theme-original .bg-card\/40,
-  html.theme-original .bg-card\/60 {
-    background-color: hsl(0 0% 100%) !important;
-  }
-
-  html.theme-original .bg-background\/40 {
-    background-color: hsl(220 14% 98%) !important;
-  }
-
-  html.theme-original .bg-muted\/20,
-  html.theme-original .bg-muted\/30,
-  html.theme-original .bg-muted\/40 {
-    background-color: hsl(220 14% 96%) !important;
-  }
-
-  /* --- Fix neon color backgrounds for sections --- */
-  html.theme-original .bg-neon-pink\/5,
-  html.theme-original .bg-neon-pink\/10 {
-    background-color: hsl(340 82% 97%) !important;
-  }
-
-  html.theme-original .bg-neon-blue\/5,
-  html.theme-original .bg-neon-blue\/10 {
-    background-color: hsl(217 91% 97%) !important;
-  }
-
-  html.theme-original .bg-neon-cyan\/5,
-  html.theme-original .bg-neon-cyan\/10 {
-    background-color: hsl(189 94% 97%) !important;
-  }
-
-  html.theme-original .bg-neon-purple\/5,
-  html.theme-original .bg-neon-purple\/10 {
-    background-color: hsl(262 83% 97%) !important;
-  }
-
-  html.theme-original .bg-neon-green\/5,
-  html.theme-original .bg-neon-green\/10 {
-    background-color: hsl(160 84% 96%) !important;
-  }
-
-  html.theme-original .bg-neon-amber\/5,
-  html.theme-original .bg-neon-amber\/10 {
-    background-color: hsl(38 92% 97%) !important;
-  }
-
-  html.theme-original .bg-neon-red\/5,
-  html.theme-original .bg-neon-red\/10 {
-    background-color: hsl(0 72% 97%) !important;
-  }
-
-  /* --- Fix neon color borders for sections --- */
-  html.theme-original .border-neon-pink\/20,
-  html.theme-original .border-neon-pink\/30,
-  html.theme-original .border-neon-pink\/40 {
-    border-color: hsl(340 82% 85%) !important;
-  }
-
-  html.theme-original .border-neon-blue\/20,
-  html.theme-original .border-neon-blue\/30 {
-    border-color: hsl(217 91% 85%) !important;
-  }
-
-  /* --- Fix status badge colors --- */
-  html.theme-original .bg-green-500\/10 {
-    background-color: hsl(142 76% 95%) !important;
-  }
-
-  html.theme-original .text-green-400 {
-    color: hsl(142 71% 35%) !important;
-  }
-
-  html.theme-original .border-green-500\/20 {
-    border-color: hsl(142 76% 80%) !important;
-  }
-
-  html.theme-original .bg-blue-500\/10 {
-    background-color: hsl(217 91% 95%) !important;
-  }
-
-  html.theme-original .text-blue-400 {
-    color: hsl(217 91% 45%) !important;
-  }
-
-  html.theme-original .border-blue-500\/20,
-  html.theme-original .border-blue-500\/30 {
-    border-color: hsl(217 91% 80%) !important;
-  }
-
-  html.theme-original .bg-amber-500\/10 {
-    background-color: hsl(38 92% 95%) !important;
-  }
-
-  html.theme-original .text-amber-400 {
-    color: hsl(38 92% 40%) !important;
-  }
-
-  html.theme-original .border-amber-500\/20 {
-    border-color: hsl(38 92% 75%) !important;
-  }
-
-  html.theme-original .bg-purple-500\/10 {
-    background-color: hsl(262 83% 96%) !important;
-  }
-
-  html.theme-original .text-purple-400,
-  html.theme-original .text-purple-500 {
-    color: hsl(262 83% 50%) !important;
-  }
-
-  html.theme-original .border-purple-500\/20,
-  html.theme-original .border-purple-500\/30 {
-    border-color: hsl(262 83% 80%) !important;
-  }
-
-  html.theme-original .bg-emerald-400\/10,
-  html.theme-original .bg-emerald-500\/10 {
-    background-color: hsl(160 84% 95%) !important;
-  }
-
-  html.theme-original .text-emerald-400 {
-    color: hsl(160 84% 35%) !important;
-  }
-
-  html.theme-original .border-emerald-400\/30,
-  html.theme-original .border-emerald-500\/20 {
-    border-color: hsl(160 84% 75%) !important;
-  }
-
-  html.theme-original .bg-violet-400\/10,
-  html.theme-original .bg-violet-500\/10 {
-    background-color: hsl(262 83% 96%) !important;
-  }
-
-  html.theme-original .text-violet-400 {
-    color: hsl(262 83% 50%) !important;
-  }
-
-  html.theme-original .border-violet-400\/30,
-  html.theme-original .border-violet-500\/20 {
-    border-color: hsl(262 83% 80%) !important;
-  }
-
-  html.theme-original .bg-red-400\/10,
-  html.theme-original .bg-red-500\/10,
-  html.theme-original .bg-red-950\/20 {
-    background-color: hsl(0 72% 96%) !important;
-  }
-
-  html.theme-original .text-red-400,
-  html.theme-original .text-red-300 {
-    color: hsl(0 72% 45%) !important;
-  }
-
-  html.theme-original .border-red-400\/30,
-  html.theme-original .border-red-500\/20,
-  html.theme-original .border-red-500\/30 {
-    border-color: hsl(0 72% 80%) !important;
-  }
-
-  html.theme-original .text-red-300\/70 {
-    color: hsl(0 72% 40%) !important;
-  }
-
-  html.theme-original .bg-orange-400\/10,
-  html.theme-original .bg-orange-500\/10 {
-    background-color: hsl(25 95% 96%) !important;
-  }
-
-  html.theme-original .text-orange-400 {
-    color: hsl(25 95% 45%) !important;
-  }
-
-  html.theme-original .border-orange-400\/30,
-  html.theme-original .border-orange-500\/20 {
-    border-color: hsl(25 95% 80%) !important;
-  }
-
-  html.theme-original .bg-slate-500\/5,
-  html.theme-original .bg-slate-500\/10 {
-    background-color: hsl(215 16% 96%) !important;
-  }
-
-  /* --- Fix primary color usage --- */
-  html.theme-original .bg-primary\/5,
-  html.theme-original .bg-primary\/10,
-  html.theme-original .bg-primary\/20 {
-    background-color: hsl(239 84% 97%) !important;
-  }
-
-  html.theme-original .border-primary\/20,
-  html.theme-original .border-primary\/30,
-  html.theme-original .border-primary\/50 {
-    border-color: hsl(239 84% 85%) !important;
-  }
-
-  html.theme-original .ring-primary\/20,
-  html.theme-original .ring-primary\/30,
-  html.theme-original .ring-primary\/50 {
-    --tw-ring-color: hsl(239 84% 85%) !important;
-  }
-
-  html.theme-original .text-primary-glow {
-    color: hsl(239 84% 50%) !important;
-    text-shadow: none !important;
-  }
-
-  html.theme-original .hover\:text-primary-glow:hover {
-    color: hsl(239 84% 45%) !important;
-    text-shadow: none !important;
-  }
-
-  /* --- Buttons: Clean professional look --- */
-  /* Only target solid primary buttons (exact class match) */
-  html.theme-original button.bg-primary {
-    background-color: hsl(239 84% 67%) !important;
-    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1) !important;
-  }
-
-  html.theme-original button.bg-primary:hover {
-    background-color: hsl(239 84% 60%) !important;
-    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1) !important;
-  }
-
-  /* Style the Generate Brief button which uses bg-primary/20 as base background */
-  html.theme-original button.bg-primary\/20 {
-    background-color: hsl(239 84% 95%) !important;
-    color: hsl(239 84% 45%) !important;
-    border-color: hsl(239 84% 75%) !important;
-  }
-
-  html.theme-original button.bg-primary\/20:hover {
-    background-color: hsl(239 84% 90%) !important;
-  }
-
-  html.theme-original .hover\:bg-primary\/10:hover,
-  html.theme-original .hover\:bg-primary\/30:hover {
-    background-color: hsl(239 84% 95%) !important;
-  }
-
-  html.theme-original .hover\:bg-primary\/80:hover {
-    background-color: hsl(239 84% 60%) !important;
-  }
-
-  /* --- Inset shadows → clean shadows --- */
-  html.theme-original [class*="shadow-\[inset"] {
-    box-shadow: none !important;
-  }
-
   /* --- Input fields --- */
   html.theme-original input,
   html.theme-original textarea {
@@ -617,69 +455,6 @@
   html.theme-original textarea:focus {
     border-color: hsl(239 84% 67%) !important;
     box-shadow: 0 0 0 3px hsl(239 84% 67% / 0.1) !important;
-  }
-
-  /* --- Separators --- */
-  html.theme-original .bg-white\/5 {
-    background-color: hsl(220 13% 91%) !important;
-  }
-
-  html.theme-original hr,
-  html.theme-original [role="separator"] {
-    background-color: hsl(220 13% 91%) !important;
-    border-color: hsl(220 13% 91%) !important;
-  }
-
-  /* --- Cards with proper elevation --- */
-  html.theme-original [class*="Card"],
-  html.theme-original .card {
-    background-color: hsl(0 0% 100%) !important;
-    border-color: hsl(220 13% 91%) !important;
-    border-radius: 0.75rem !important;
-    box-shadow: var(--shadow-card) !important;
-  }
-
-  /* --- Header specific fixes --- */
-  html.theme-original header {
-    background-color: hsl(0 0% 100% / 0.95) !important;
-    backdrop-filter: blur(8px) !important;
-    border-color: hsl(220 13% 91%) !important;
-  }
-
-  html.theme-original header .absolute {
-    display: none !important;
-  }
-
-  /* --- Login page specific fixes --- */
-  html.theme-original .bg-grid-pattern {
-    display: none !important;
-  }
-
-  html.theme-original [class*="blur-\[100px\]"] {
-    display: none !important;
-  }
-
-  /* --- Dropdown menus --- */
-  html.theme-original [role="menu"],
-  html.theme-original [data-radix-menu-content] {
-    background-color: hsl(0 0% 100%) !important;
-    border-color: hsl(220 13% 91%) !important;
-    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
-  }
-
-  /* --- Badges: Softer, more refined --- */
-  html.theme-original .badge,
-  html.theme-original [class*="Badge"] {
-    font-weight: 500 !important;
-  }
-
-  /* --- Fix loading/skeleton states --- */
-  html.theme-original .animate-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
-  }
-
-  html.theme-original .bg-white\/5 {
-    background-color: hsl(220 14% 93%) !important;
   }
 
   /* --- Selection color --- */
@@ -701,52 +476,6 @@
     color: hsl(224 71% 4%) !important;
     border: 1px solid hsl(220 13% 91%) !important;
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1) !important;
-  }
-
-  /* --- Fix gradient text in login --- */
-  html.theme-original .bg-gradient-to-r.from-indigo-500,
-  html.theme-original [class*="from-indigo"][class*="to-purple"] {
-    background: hsl(239 84% 67%) !important;
-    -webkit-background-clip: unset !important;
-    background-clip: unset !important;
-  }
-
-  /* --- Fix hover states on cards/items --- */
-  html.theme-original .hover\:border-white\/20:hover,
-  html.theme-original .hover\:border-white\/40:hover {
-    border-color: hsl(220 13% 85%) !important;
-  }
-
-  html.theme-original .hover\:border-neon-pink\/40:hover {
-    border-color: hsl(340 82% 75%) !important;
-  }
-
-  /* --- Remove backdrop blur where not needed --- */
-  html.theme-original .backdrop-blur-sm,
-  html.theme-original .backdrop-blur-md,
-  html.theme-original .backdrop-blur-xl {
-    backdrop-filter: none !important;
-  }
-
-  /* Keep blur only on header */
-  html.theme-original header .backdrop-blur-xl {
-    backdrop-filter: blur(8px) !important;
-  }
-
-  /* --- Checkbox styling --- */
-  html.theme-original [role="checkbox"],
-  html.theme-original .checkbox {
-    border-color: hsl(220 13% 75%) !important;
-  }
-
-  html.theme-original [role="checkbox"][data-state="checked"] {
-    background-color: hsl(239 84% 67%) !important;
-    border-color: hsl(239 84% 67%) !important;
-  }
-
-  /* --- Gradient backgrounds on login → solid colors --- */
-  html.theme-original .bg-gradient-to-b.from-white\/5 {
-    background: transparent !important;
   }
 }
 

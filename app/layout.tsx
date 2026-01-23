@@ -5,12 +5,12 @@ import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from '@/components/theme-provider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const rajdhani = Rajdhani({ 
+const rajdhani = Rajdhani({
   weight: ['300', '400', '500', '600', '700'],
   subsets: ['latin'],
   variable: '--font-rajdhani'
 });
-const jetbrainsMono = JetBrains_Mono({ 
+const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains-mono'
 });
@@ -20,14 +20,31 @@ export const metadata: Metadata = {
   description: 'Your intelligent work assistant for Jira, GitHub, and more',
 };
 
+// Script to prevent theme flash - runs before React hydrates
+const themeScript = `
+  (function() {
+    try {
+      var theme = localStorage.getItem('work-intel-theme') || 'future';
+      var root = document.documentElement;
+      root.classList.add('theme-' + theme);
+      if (theme === 'future') {
+        root.classList.add('dark');
+      }
+    } catch (e) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark theme-future">
-      <body className={`${inter.variable} ${rajdhani.variable} ${jetbrainsMono.variable} font-sans bg-background text-foreground antialiased selection:bg-cyan-500/30 selection:text-cyan-200`}>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body className={`${inter.variable} ${rajdhani.variable} ${jetbrainsMono.variable} font-sans bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary`}>
         <ThemeProvider>
           {children}
           <Toaster
@@ -35,21 +52,21 @@ export default function RootLayout({
             toastOptions={{
               duration: 4000,
               style: {
-                background: '#0f172a',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'hsl(var(--card))',
+                color: 'hsl(var(--card-foreground))',
+                border: '1px solid hsl(var(--border))',
                 backdropFilter: 'blur(10px)',
               },
               success: {
                 iconTheme: {
-                  primary: '#06b6d4',
-                  secondary: '#fff',
+                  primary: 'hsl(var(--status-success))',
+                  secondary: 'hsl(var(--card))',
                 },
               },
               error: {
                 iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
+                  primary: 'hsl(var(--destructive))',
+                  secondary: 'hsl(var(--card))',
                 },
               },
             }}
