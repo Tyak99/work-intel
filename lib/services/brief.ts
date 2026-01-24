@@ -2,10 +2,12 @@ import { fetchGitHubData } from './github';
 import { fetchJiraData } from './jira';
 import { fetchGmailData } from './gmailData';
 import { fetchCalendarData } from './calendarData';
+import { fetchDriveData } from './driveData';
 import { processBriefWithClaude } from './claude';
 import { Brief } from '@/lib/types';
 import { cache, cacheKeys } from '../cache';
 import { getUserGrant } from './nylas';
+import { getUserDriveGrant } from './google-drive';
 import { supabase } from '../supabase';
 
 /**
@@ -107,8 +109,12 @@ export async function generateDailyBriefService(userId: string): Promise<Brief> 
     const nylasGrant = await getUserGrant(userId);
     const hasNylasConnection = !!nylasGrant;
 
+    // Check if Google Drive is connected
+    const driveGrant = await getUserDriveGrant(userId);
+    const hasDriveConnection = !!driveGrant;
+
     // Fetch data from all connected tools in parallel
-    const [githubData, jiraData, gmailData, calendarData] = await Promise.all([
+    const [githubData, jiraData, gmailData, calendarData, driveData] = await Promise.all([
       fetchGitHubData(undefined, userId).catch(error => {
         console.error('GitHub fetch failed:', error);
         return null;
@@ -124,6 +130,10 @@ export async function generateDailyBriefService(userId: string): Promise<Brief> 
       hasNylasConnection ? fetchCalendarData(userId).catch(error => {
         console.error('Calendar fetch failed:', error);
         return null;
+      }) : Promise.resolve(null),
+      hasDriveConnection ? fetchDriveData(userId).catch(error => {
+        console.error('Drive fetch failed:', error);
+        return null;
       }) : Promise.resolve(null)
     ]);
 
@@ -131,7 +141,8 @@ export async function generateDailyBriefService(userId: string): Promise<Brief> 
       github: githubData ? 'success' : 'failed',
       jira: jiraData ? 'success' : 'failed',
       gmail: gmailData ? 'success' : hasNylasConnection ? 'failed' : 'not connected',
-      calendar: calendarData ? 'success' : hasNylasConnection ? 'failed' : 'not connected'
+      calendar: calendarData ? 'success' : hasNylasConnection ? 'failed' : 'not connected',
+      drive: driveData ? 'success' : hasDriveConnection ? 'failed' : 'not connected'
     });
 
     // Combine all tool data
@@ -139,7 +150,8 @@ export async function generateDailyBriefService(userId: string): Promise<Brief> 
       github: githubData,
       jira: jiraData,
       gmail: gmailData,
-      calendar: calendarData
+      calendar: calendarData,
+      drive: driveData
     };
 
     // Process with Claude AI

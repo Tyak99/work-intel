@@ -68,3 +68,25 @@ export interface ToolConnectionRow {
   connected_at: string;
   last_sync?: string;
 }
+
+export interface GoogleDriveGrantRow {
+  id: string;
+  user_id: string;
+  email: string;
+  access_token: string;
+  refresh_token: string;
+  token_expiry: string;
+  scopes: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DriveFolderRow {
+  id: string;
+  user_id: string;
+  folder_id: string;
+  folder_name: string;
+  purpose: string | null;
+  enabled: boolean;
+  created_at: string;
+}

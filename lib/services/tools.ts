@@ -1,6 +1,7 @@
 import { testGitHubConnection } from './github';
 import { testJiraConnection } from './jira';
 import { testNylasConnection, getUserGrant, setUserGrant, revokeGrant, NylasGrant } from './nylas';
+import { testDriveConnection, getUserDriveGrant } from './google-drive';
 import { ToolStatus } from '@/lib/types';
 import { cache, cacheKeys } from '../cache';
 
@@ -46,6 +47,11 @@ export async function connectTool(
         // For Nylas, we return the OAuth URL instead of testing credentials directly
         const authUrl = `/api/auth/nylas/connect?userId=${userId}`;
         return { success: true, message: 'Redirecting to Nylas OAuth', authUrl };
+
+      case 'google-drive':
+        // For Google Drive, we return the OAuth URL
+        const driveAuthUrl = `/api/auth/google-drive/connect`;
+        return { success: true, message: 'Redirecting to Google Drive OAuth', authUrl: driveAuthUrl };
 
       default:
         return { success: false, message: 'Unsupported tool type' };
@@ -145,6 +151,23 @@ export async function getToolStatus(userId: string): Promise<Record<string, Tool
   } else {
     status.gmail = { status: 'disconnected' };
     status.calendar = { status: 'disconnected' };
+  }
+
+  // Google Drive Status
+  const driveGrant = await getUserDriveGrant(userId);
+  if (driveGrant) {
+    try {
+      const isConnected = await testDriveConnection(userId);
+      if (isConnected) {
+        status.drive = { status: 'connected', lastSync: new Date(driveGrant.tokenExpiry) };
+      } else {
+        status.drive = { status: 'error', error: 'Connection lost' };
+      }
+    } catch (error) {
+      status.drive = { status: 'error', error: 'Connection failed' };
+    }
+  } else {
+    status.drive = { status: 'disconnected' };
   }
 
   // Cache for 5 minutes

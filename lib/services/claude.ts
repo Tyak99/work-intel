@@ -90,7 +90,13 @@ ANALYSIS GUIDELINES:
    - Marketing/newsletters: Skip entirely
    - Personal/team emails from real people: Include with actionType "respond" if needs response
 5. Jira Tasks: What's in progress? What's blocked? What's due soon?
-6. Focus Recommendation: Based on all data, what should be the top 3 priorities?
+6. Drive Files: Review recently modified files from watched Google Drive folders. Look for:
+   - Meeting notes with action items or commitments mentioned
+   - Documents with upcoming deadlines or deliverables
+   - Notes about tasks, decisions, or follow-ups
+   - Relevant context for today's meetings (check meeting titles against file names/content)
+   - Use this context to enrich meeting prep suggestions and focus recommendations
+7. Focus Recommendation: Based on all data (including Drive file insights), what should be the top 3 priorities?
 
 IMPORTANT: Preserve URLs from the context data. When an item has a "url" field in the input, include it in your output.
 
