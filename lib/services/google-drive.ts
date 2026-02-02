@@ -62,9 +62,64 @@ function getRedirectUri(): string {
 }
 
 /**
+ * Generate a random state token for CSRF protection
+ */
+export async function createOAuthState(userId: string): Promise<string> {
+  const stateToken = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
+
+  const { error } = await supabase
+    .from('drive_oauth_states')
+    .insert({
+      user_id: userId,
+      state_token: stateToken,
+      expires_at: expiresAt.toISOString(),
+    });
+
+  if (error) {
+    console.error('[GoogleDrive] Error creating OAuth state:', error);
+    throw error;
+  }
+
+  return stateToken;
+}
+
+/**
+ * Verify and consume a state token, returning the associated userId
+ */
+export async function verifyOAuthState(stateToken: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('drive_oauth_states')
+    .select('user_id, expires_at')
+    .eq('state_token', stateToken)
+    .single();
+
+  if (error || !data) {
+    console.error('[GoogleDrive] Invalid OAuth state token');
+    return null;
+  }
+
+  // Delete the token (one-time use)
+  await supabase
+    .from('drive_oauth_states')
+    .delete()
+    .eq('state_token', stateToken);
+
+  // Check expiry
+  if (new Date(data.expires_at) < new Date()) {
+    console.error('[GoogleDrive] OAuth state token expired');
+    return null;
+  }
+
+  return data.user_id;
+}
+
+/**
  * Build the Google OAuth authorization URL
  */
-export function buildDriveAuthUrl(userId: string): string {
+export async function buildDriveAuthUrl(userId: string): Promise<string> {
+  const stateToken = await createOAuthState(userId);
+
   const params = new URLSearchParams({
     client_id: getClientId(),
     redirect_uri: getRedirectUri(),
@@ -72,7 +127,7 @@ export function buildDriveAuthUrl(userId: string): string {
     scope: DRIVE_SCOPES.join(' '),
     access_type: 'offline',
     prompt: 'consent', // Force consent to get refresh token
-    state: userId,
+    state: stateToken,
   });
 
   return `${GOOGLE_OAUTH_URL}?${params.toString()}`;
@@ -314,6 +369,17 @@ export async function testDriveConnection(userId: string): Promise<boolean> {
 // ============= Folder Management =============
 
 /**
+ * Validate a Drive file/folder ID to prevent query injection.
+ * Drive IDs are alphanumeric with hyphens and underscores.
+ */
+function sanitizeDriveId(id: string): string {
+  if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+    throw new Error(`Invalid Drive ID: ${id}`);
+  }
+  return id;
+}
+
+/**
  * List all folders the user can access (for folder picker)
  */
 export async function listAvailableFolders(userId: string, parentId?: string): Promise<DriveFile[]> {
@@ -322,8 +388,9 @@ export async function listAvailableFolders(userId: string, parentId?: string): P
     throw new Error('Not authenticated with Google Drive');
   }
 
-  const query = parentId
-    ? `'${parentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
+  const safeParentId = parentId ? sanitizeDriveId(parentId) : null;
+  const query = safeParentId
+    ? `'${safeParentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`
     : `'root' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
 
   const params = new URLSearchParams({
@@ -442,7 +509,8 @@ export async function listFilesInFolder(
 
   const { limit = 20, modifiedAfter } = options;
 
-  let query = `'${folderId}' in parents and trashed = false`;
+  const safeFolderId = sanitizeDriveId(folderId);
+  let query = `'${safeFolderId}' in parents and trashed = false`;
 
   // Only include readable file types
   const readableTypes = [

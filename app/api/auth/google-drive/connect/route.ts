@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const authUrl = buildDriveAuthUrl(userId);
+    const authUrl = await buildDriveAuthUrl(userId);
 
     return NextResponse.redirect(authUrl);
   } catch (error) {

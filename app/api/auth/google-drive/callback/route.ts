@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { exchangeCodeForTokens } from '@/lib/services/google-drive';
+import { exchangeCodeForTokens, verifyOAuthState } from '@/lib/services/google-drive';
 
 function getBaseUrl(): string {
   return process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3004';
@@ -13,12 +13,8 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
-    const state = searchParams.get('state'); // This is the user ID
+    const state = searchParams.get('state');
     const error = searchParams.get('error');
-
-    console.log('[GoogleDrive Callback] Params - code:', code ? 'present' : 'null');
-    console.log('[GoogleDrive Callback] Params - state (userId):', state);
-    console.log('[GoogleDrive Callback] Params - error:', error);
 
     if (error) {
       console.error('[GoogleDrive Callback] OAuth error:', error);
@@ -34,9 +30,18 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Verify CSRF state token and get the associated userId
+    const userId = await verifyOAuthState(state);
+    if (!userId) {
+      console.error('[GoogleDrive Callback] Invalid or expired state token');
+      return NextResponse.redirect(
+        `${baseUrl}/?drive_error=${encodeURIComponent('Invalid or expired authentication session. Please try again.')}`
+      );
+    }
+
     try {
       // Exchange code for tokens and save grant
-      const grant = await exchangeCodeForTokens(code, state);
+      const grant = await exchangeCodeForTokens(code, userId);
 
       console.log('[GoogleDrive Callback] Grant received for:', grant.email);
 
