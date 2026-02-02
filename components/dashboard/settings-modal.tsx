@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Github, Calendar, Mail, Settings, CheckCircle, XCircle, Loader2, Activity, Zap, Monitor, Sparkles } from 'lucide-react';
+import { Github, Calendar, Mail, Settings, CheckCircle, XCircle, Loader2, Activity, Zap, Monitor, Sparkles, HardDrive } from 'lucide-react';
+import { DriveFolderPicker } from './drive-folder-picker';
 import { useState, useEffect } from 'react';
 import { useDashboardStore } from '@/lib/store';
 import { useTheme } from '@/components/theme-provider';
@@ -50,6 +51,14 @@ const tools = [
     description: 'Synchronize temporal events and schedules',
     authType: 'oauth',
     color: 'neon-blue',
+  },
+  {
+    id: 'drive',
+    name: 'DRIVE VAULT',
+    icon: HardDrive,
+    description: 'Access document repositories and file archives',
+    authType: 'oauth-drive',
+    color: 'neon-cyan',
   },
 ];
 
@@ -154,6 +163,32 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       } finally {
         setConnecting(prev => ({ ...prev, gmail: false, calendar: false }));
       }
+    } else if (toolId === 'drive') {
+      // Google Drive OAuth
+      setConnecting(prev => ({ ...prev, drive: true }));
+
+      try {
+        const response = await fetch('/api/tools/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            toolType: 'google-drive',
+            credentials: {}
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.authUrl) {
+          window.location.href = result.authUrl;
+        } else {
+          toast.error('Drive auth initiation failed');
+        }
+      } catch (error) {
+        toast.error('Error initiating Drive OAuth');
+      } finally {
+        setConnecting(prev => ({ ...prev, drive: false }));
+      }
     } else {
       toast.error('Protocol not implemented');
     }
@@ -176,6 +211,22 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         }
       } catch (error) {
         toast.error('Error executing disconnect');
+      }
+    } else if (toolId === 'drive') {
+      try {
+        const response = await fetch('/api/auth/google-drive/disconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+          await refreshToolStatus();
+          toast.success('Drive disconnected');
+        } else {
+          toast.error('Failed to disconnect Drive');
+        }
+      } catch (error) {
+        toast.error('Error disconnecting Drive');
       }
     }
   };
@@ -364,6 +415,49 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                                   </Button>
                                 </div>
                               </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : tool.authType === 'oauth-drive' ? (
+                        <div className="space-y-3 bg-muted/30 p-3 rounded border border-border">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                              <p className="text-[10px] text-muted-foreground font-mono uppercase">
+                                GOOGLE DRIVE OAUTH 2.0
+                              </p>
+                              {isConnected && status?.lastSync && (
+                                <p className="text-[10px] text-primary/70 mt-1 font-mono">
+                                  TOKEN VALID UNTIL: {new Date(status.lastSync).toLocaleString()}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex space-x-2">
+                              {isConnected && (
+                                <Button
+                                  onClick={() => handleDisconnect(tool.id)}
+                                  variant="destructive"
+                                  className="h-7 text-[10px] uppercase font-bold bg-red-900/20 text-red-400 border border-red-500/30 hover:bg-red-900/40"
+                                  size="sm"
+                                >
+                                  Terminate
+                                </Button>
+                              )}
+                              <Button
+                                onClick={() => handleOAuthConnect(tool.id)}
+                                variant={isConnected ? "outline" : "default"}
+                                disabled={isConnecting}
+                                className="h-7 text-[10px] uppercase font-bold"
+                              >
+                                {isConnecting ? (
+                                  <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                                ) : null}
+                                {isConnected ? 'Reconnect' : 'Authenticate'}
+                              </Button>
+                            </div>
+                          </div>
+                          {isConnected && (
+                            <div className="pt-3 border-t border-border">
+                              <DriveFolderPicker onFolderAdded={() => refreshToolStatus()} />
                             </div>
                           )}
                         </div>

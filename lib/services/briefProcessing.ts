@@ -1,5 +1,6 @@
 import { GmailDataForBrief } from './gmailData';
 import { CalendarDataForBrief } from './calendarData';
+import { DriveDataForBrief } from './driveData';
 import { Brief, SmartTodo, BriefListItem, MeetingItem } from '../types';
 
 export interface ToolData {
@@ -7,6 +8,7 @@ export interface ToolData {
   github?: any;
   gmail?: GmailDataForBrief | null;
   calendar?: CalendarDataForBrief | null;
+  drive?: DriveDataForBrief | null;
 }
 
 export interface ProcessedEmail {
@@ -87,12 +89,22 @@ const AUTOMATED_TYPE_PATTERNS: Array<{ type: string; pattern: RegExp }> = [
   { type: 'marketing', pattern: /newsletter|marketing|promo|sale/i }
 ];
 
+export interface ProcessedDriveFile {
+  folderName: string;
+  folderPurpose: string | null;
+  fileName: string;
+  modifiedTime: string;
+  contentPreview: string;
+  webViewLink?: string;
+}
+
 export function buildCondensedBriefContext(toolData: ToolData) {
   return {
     emails: processEmails(toolData.gmail ?? null),
     prs: processPullRequests(toolData.github ?? null),
     calendarEvents: processCalendarEvents(toolData.calendar ?? null),
     jiraTasks: processJiraTasks(toolData.jira ?? null),
+    driveFiles: processDriveFiles(toolData.drive ?? null),
     generatedAt: new Date().toISOString()
   };
 }
@@ -236,6 +248,36 @@ function processJiraTasks(jiraData: any | null): ProcessedJiraTask[] {
       url: jiraUrl && issue.key ? `${jiraUrl}/browse/${issue.key}` : undefined
     };
   });
+}
+
+const MAX_DRIVE_CONTENT_CHARS = 2000;
+
+function processDriveFiles(driveData: DriveDataForBrief | null): ProcessedDriveFile[] {
+  if (!driveData || !driveData.folders || driveData.folders.length === 0) {
+    return [];
+  }
+
+  const files: ProcessedDriveFile[] = [];
+
+  for (const folder of driveData.folders) {
+    for (const file of folder.files) {
+      files.push({
+        folderName: folder.name,
+        folderPurpose: folder.purpose,
+        fileName: file.name,
+        modifiedTime: file.modifiedTime,
+        contentPreview: truncate(file.content, MAX_DRIVE_CONTENT_CHARS),
+        webViewLink: file.webViewLink,
+      });
+    }
+  }
+
+  // Sort by modification time (most recent first)
+  files.sort((a, b) =>
+    new Date(b.modifiedTime).getTime() - new Date(a.modifiedTime).getTime()
+  );
+
+  return files;
 }
 
 function detectAutomation(from: string, subject: string) {
