@@ -9,28 +9,32 @@ export async function GET(req: NextRequest) {
   const baseUrl = getBaseUrl();
 
   console.log('[GoogleDrive Callback] Starting callback handler');
+  console.log('[GoogleDrive Callback] URL:', req.url);
 
   try {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
     const state = searchParams.get('state');
-    const error = searchParams.get('error');
+    const errorParam = searchParams.get('error');
 
-    if (error) {
-      console.error('[GoogleDrive Callback] OAuth error:', error);
+    console.log('[GoogleDrive Callback] Params - code:', code ? 'present' : 'null', 'state:', state ? 'present' : 'null', 'error:', errorParam);
+
+    if (errorParam) {
       const errorDescription = searchParams.get('error_description');
+      console.error('[GoogleDrive Callback] OAuth error from Google:', errorParam, errorDescription);
       return NextResponse.redirect(
-        `${baseUrl}/?drive_error=${encodeURIComponent(errorDescription || 'Google Drive authentication failed')}`
+        `${baseUrl}/?drive_error=${encodeURIComponent(errorDescription || `OAuth rejected: ${errorParam}`)}`
       );
     }
 
     if (!code || !state) {
       return NextResponse.redirect(
-        `${baseUrl}/?drive_error=${encodeURIComponent('Missing authorization code')}`
+        `${baseUrl}/?drive_error=${encodeURIComponent('Missing authorization code or state')}`
       );
     }
 
     // Verify CSRF state token and get the associated userId
+    console.log('[GoogleDrive Callback] Verifying state token...');
     const userId = await verifyOAuthState(state);
     if (!userId) {
       console.error('[GoogleDrive Callback] Invalid or expired state token');
@@ -39,6 +43,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    console.log('[GoogleDrive Callback] State verified, exchanging code for tokens...');
     try {
       // Exchange code for tokens and save grant
       const grant = await exchangeCodeForTokens(code, userId);
@@ -49,16 +54,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.redirect(
         `${baseUrl}/?drive_connected=true&drive_email=${encodeURIComponent(grant.email)}`
       );
-    } catch (exchangeError) {
+    } catch (exchangeError: any) {
       console.error('[GoogleDrive Callback] Token exchange error:', exchangeError);
       return NextResponse.redirect(
-        `${baseUrl}/?drive_error=${encodeURIComponent('Failed to complete Google Drive authentication')}`
+        `${baseUrl}/?drive_error=${encodeURIComponent(`Token exchange failed: ${exchangeError.message || exchangeError}`)}`
       );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('[GoogleDrive Callback] Unexpected error:', error);
     return NextResponse.redirect(
-      `${baseUrl}/?drive_error=${encodeURIComponent('Google Drive authentication failed')}`
+      `${baseUrl}/?drive_error=${encodeURIComponent(`Callback error: ${error.message || error}`)}`
     );
   }
 }
