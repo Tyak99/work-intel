@@ -7,6 +7,7 @@ const PUBLIC_ROUTES = [
   '/login',
   '/api/auth/nylas/initiate',
   '/api/auth/nylas/callback',
+  '/api/auth/google-drive/callback',
 ];
 
 // API routes that require authentication

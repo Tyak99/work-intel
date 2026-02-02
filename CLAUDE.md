@@ -26,7 +26,18 @@ npx tsc --noEmit
 npm run chrome:debug       # Start headless Chrome on port 9222
 npm run chrome:debug-status # Check if debug Chrome is running
 npm run chrome:stop        # Stop debug Chrome
+
+# Vercel CLI (authenticated)
+vercel env ls              # List environment variables
+vercel env pull            # Pull env vars to .env.local
+vercel logs <url>          # View runtime logs for a deployment
+vercel inspect <url>       # Inspect a deployment
+vercel --prod              # Deploy to production
 ```
+
+## Deployment
+
+The app is deployed on Vercel. The project is linked as `nasri/work-intel` with the domain `work-intel.vercel.app`. The Vercel CLI is authenticated and available for debugging deployments, checking logs, and managing environment variables.
 
 ## Testing Requirements
 
