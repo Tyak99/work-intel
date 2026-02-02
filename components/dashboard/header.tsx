@@ -48,6 +48,14 @@ export function Header({ onGenerateBrief, onOpenSettings, isGenerating }: Header
           <Button
             onClick={onGenerateBrief}
             disabled={isGenerating}
+            size="icon"
+            className="md:hidden bg-primary/20 text-primary border-primary/50 hover:bg-primary/30 shadow-glow-sm h-9 w-9"
+          >
+            <Sparkles className={`h-4 w-4 ${isGenerating ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button
+            onClick={onGenerateBrief}
+            disabled={isGenerating}
             className="hidden md:flex bg-primary/20 text-primary border-primary/50 hover:bg-primary/30 shadow-glow-sm font-mono text-xs uppercase tracking-wider font-bold h-9"
           >
             {isGenerating ? (
