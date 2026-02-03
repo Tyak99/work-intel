@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTeamStore } from '@/lib/team-store';
 import { useDashboardStore } from '@/lib/store';
+import { NavHeader, TeamInfo } from '@/components/nav-header';
 import { SummaryBanner } from '@/components/team/summary-banner';
 import { NeedsAttention } from '@/components/team/needs-attention';
 import { MemberCard } from '@/components/team/member-card';
 import { ReportGenerateButton } from '@/components/team/report-generate-button';
-import { Settings, ArrowLeft } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TeamDashboardPage() {
@@ -18,19 +19,23 @@ export default function TeamDashboardPage() {
   const { user, fetchCurrentUser } = useDashboardStore();
   const { team, members, report, integrations, isLoading, fetchTeam, fetchLatestReport, reset } = useTeamStore();
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [allTeams, setAllTeams] = useState<TeamInfo[]>([]);
 
   useEffect(() => {
     fetchCurrentUser();
   }, []);
 
-  // Resolve slug to team
+  // Resolve slug to team and load all teams for the nav
   useEffect(() => {
     async function resolveTeam() {
       try {
         const response = await fetch('/api/teams', { credentials: 'include' });
         if (!response.ok) return;
         const data = await response.json();
-        const found = data.teams?.find((t: any) => t.slug === slug);
+        const teams = data.teams || [];
+        setAllTeams(teams);
+
+        const found = teams.find((t: any) => t.slug === slug);
         if (found) {
           setTeamId(found.id);
         } else {
@@ -64,17 +69,14 @@ export default function TeamDashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
+      <NavHeader teams={allTeams} currentTeamSlug={slug} />
+
+      {/* Sub-header with team name and actions */}
+      <div className="border-b border-border bg-card/50">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
-              <ArrowLeft className="w-5 h-5" />
-            </Link>
-            <div>
-              <h1 className="text-xl font-semibold text-foreground">{team.name}</h1>
-              <p className="text-sm text-muted-foreground">{members.length} members</p>
-            </div>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">{team.name}</h1>
+            <p className="text-sm text-muted-foreground">{members.length} members</p>
           </div>
           <div className="flex items-center gap-2">
             {teamId && hasGitHub && <ReportGenerateButton teamId={teamId} />}
@@ -87,7 +89,7 @@ export default function TeamDashboardPage() {
             </Link>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
@@ -124,7 +126,7 @@ export default function TeamDashboardPage() {
         ) : hasGitHub ? (
           <div className="rounded-lg border border-border bg-card p-8 text-center">
             <p className="text-muted-foreground mb-1">No report generated yet</p>
-            <p className="text-sm text-muted-foreground">Click "Generate Report" to create your first weekly summary</p>
+            <p className="text-sm text-muted-foreground">Click &quot;Generate Report&quot; to create your first weekly summary</p>
           </div>
         ) : null}
       </main>

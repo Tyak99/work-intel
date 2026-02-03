@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useTeamStore } from '@/lib/team-store';
 import { useDashboardStore } from '@/lib/store';
+import { NavHeader, TeamInfo } from '@/components/nav-header';
 import { GitHubConnectForm } from '@/components/team/github-connect-form';
 import { MemberManagement } from '@/components/team/member-management';
 import { ArrowLeft } from 'lucide-react';
@@ -16,6 +17,7 @@ export default function TeamSettingsPage() {
   const { user, fetchCurrentUser } = useDashboardStore();
   const { team, members, integrations, isLoading, fetchTeam, reset } = useTeamStore();
   const [teamId, setTeamId] = useState<string | null>(null);
+  const [allTeams, setAllTeams] = useState<TeamInfo[]>([]);
 
   useEffect(() => {
     fetchCurrentUser();
@@ -27,7 +29,10 @@ export default function TeamSettingsPage() {
         const response = await fetch('/api/teams', { credentials: 'include' });
         if (!response.ok) return;
         const data = await response.json();
-        const found = data.teams?.find((t: any) => t.slug === slug);
+        const teams = data.teams || [];
+        setAllTeams(teams);
+
+        const found = teams.find((t: any) => t.slug === slug);
         if (found) {
           setTeamId(found.id);
         } else {
@@ -62,7 +67,10 @@ export default function TeamSettingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
+      <NavHeader teams={allTeams} currentTeamSlug={slug} />
+
+      {/* Sub-header */}
+      <div className="border-b border-border bg-card/50">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
           <Link href={`/team/${slug}`} className="text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-5 h-5" />
@@ -71,7 +79,7 @@ export default function TeamSettingsPage() {
             <h1 className="text-xl font-semibold text-foreground">{team.name} Settings</h1>
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
         {/* GitHub Integration */}

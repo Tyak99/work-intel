@@ -54,12 +54,13 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET /api/teams - List user's teams
+// GET /api/teams - List user's teams with member count and latest report date
 export async function GET() {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+    // Get user's team memberships with team details
     const { data: memberships, error } = await supabase
       .from('team_members')
       .select('team_id, role, teams(*)')
@@ -70,9 +71,54 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to list teams' }, { status: 500 });
     }
 
-    const teams = (memberships || []).map(m => ({
+    if (!memberships || memberships.length === 0) {
+      return NextResponse.json({ teams: [] });
+    }
+
+    // Get team IDs
+    const teamIds = memberships.map(m => m.team_id);
+
+    // Get member counts for all teams
+    const { data: memberCounts, error: memberCountError } = await supabase
+      .from('team_members')
+      .select('team_id')
+      .in('team_id', teamIds);
+
+    if (memberCountError) {
+      console.error('Error getting member counts:', memberCountError);
+    }
+
+    // Count members per team
+    const memberCountMap: Record<string, number> = {};
+    (memberCounts || []).forEach((m) => {
+      memberCountMap[m.team_id] = (memberCountMap[m.team_id] || 0) + 1;
+    });
+
+    // Get latest report for each team
+    const { data: reports, error: reportsError } = await supabase
+      .from('weekly_reports')
+      .select('team_id, generated_at')
+      .in('team_id', teamIds)
+      .order('generated_at', { ascending: false });
+
+    if (reportsError) {
+      console.error('Error getting latest reports:', reportsError);
+    }
+
+    // Get the latest report date per team
+    const latestReportMap: Record<string, string> = {};
+    (reports || []).forEach((r) => {
+      if (!latestReportMap[r.team_id]) {
+        latestReportMap[r.team_id] = r.generated_at;
+      }
+    });
+
+    // Build enriched team list
+    const teams = memberships.map(m => ({
       ...m.teams,
       role: m.role,
+      memberCount: memberCountMap[m.team_id] || 0,
+      latestReportDate: latestReportMap[m.team_id] || null,
     }));
 
     return NextResponse.json({ teams });

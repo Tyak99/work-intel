@@ -47,8 +47,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check auth API routes (me, logout)
-  if (pathname.startsWith('/api/auth/me') || pathname.startsWith('/api/auth/logout')) {
+  // Check auth API routes (me, logout, founder-check)
+  if (
+    pathname.startsWith('/api/auth/me') ||
+    pathname.startsWith('/api/auth/logout') ||
+    pathname.startsWith('/api/auth/founder-check')
+  ) {
     if (!sessionToken) {
       return NextResponse.json(
         { error: 'Unauthorized' },
