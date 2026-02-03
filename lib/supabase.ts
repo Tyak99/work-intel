@@ -90,3 +90,67 @@ export interface DriveFolderRow {
   enabled: boolean;
   created_at: string;
 }
+
+export interface TeamRow {
+  id: string;
+  name: string;
+  slug: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamMemberRow {
+  id: string;
+  team_id: string;
+  user_id: string;
+  role: 'admin' | 'member';
+  github_username: string | null;
+  joined_at: string;
+}
+
+export interface TeamIntegrationRow {
+  id: string;
+  team_id: string;
+  provider: 'github' | 'jira' | 'linear';
+  config: Record<string, any>;
+  connected_by: string;
+  connected_at: string;
+  last_sync_at: string | null;
+}
+
+export interface WeeklyReportRow {
+  id: string;
+  team_id: string;
+  week_start: string;
+  report_data: WeeklyReportData;
+  generated_at: string;
+}
+
+export interface WeeklyReportData {
+  teamSummary: {
+    totalPRsMerged: number;
+    totalPRsOpen: number;
+    stuckPRsCount: number;
+    summary: string;
+    velocity: string;
+    keyHighlights: string[];
+  };
+  needsAttention: Array<{
+    type: 'stuck_pr' | 'blocked_pr' | 'unreviewed_pr';
+    title: string;
+    url: string;
+    repo: string;
+    author: string;
+    daysSinceUpdate: number;
+    reason: string;
+  }>;
+  memberSummaries: Array<{
+    githubUsername: string;
+    shipped: Array<{ title: string; url: string; repo: string }>;
+    inFlight: Array<{ title: string; url: string; repo: string; daysSinceUpdate: number }>;
+    reviewActivity: number;
+    commitCount: number;
+    aiSummary: string;
+  }>;
+}

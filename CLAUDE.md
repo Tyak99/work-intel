@@ -4,7 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Work Intel is an AI-powered work intelligence dashboard that synthesizes information from GitHub, Jira, Gmail, and Google Calendar to generate actionable daily briefs with smart AI-assisted actions.
+Work Intel is pivoting from a personal AI dashboard to a **team engineering intelligence tool**.
+
+**Read `PRODUCT_ROADMAP.md` at the start of every session** — it contains the full product strategy, current phase, what's been done, and what's next. Update its "Session Handoff Notes" section at the end of every session.
+
+### Current Direction (Feb 2026 Pivot)
+- **Phase 1 (NOW)**: Weekly Team Recap — GitHub only, one admin connects, whole team gets value
+- **Phase 2 (FUTURE)**: Standup Autopilot — add Jira/Linear, daily cadence, Slack bot
+- **Phase 3 (FUTURE)**: Full Context — add Gmail/Calendar, action agents, cross-tool intelligence
+
+### Legacy Context
+The codebase was originally built as a personal tool that synthesizes GitHub, Jira, Gmail, and Google Calendar into daily briefs. This code still works and serves as the foundation, but new development should focus on the team-first direction described in `PRODUCT_ROADMAP.md`.
 
 ## Development Commands
 
@@ -80,30 +90,46 @@ curl -s "http://localhost:3000/api/brief/latest" --cookie "work_intel_session=<t
 
 ### Key Directories
 ```
-app/api/                    # API Routes
-├── brief/                  # Brief generation endpoints
-│   ├── generate/route.ts   # Main brief generation
-│   ├── latest/route.ts     # Fetch cached brief
-│   └── prepare-action/route.ts # AI-drafted actions
-├── tasks/route.ts          # Todo CRUD
-└── auth/nylas/             # OAuth flow handlers
+app/
+├── api/                    # API Routes
+│   ├── brief/              # Personal brief endpoints (legacy)
+│   ├── tasks/route.ts      # Todo CRUD
+│   ├── auth/               # OAuth flow handlers
+│   └── teams/              # Team API endpoints (NEW)
+│       ├── route.ts                    # POST create, GET list teams
+│       └── [teamId]/
+│           ├── route.ts                # GET team details
+│           ├── members/route.ts        # GET/POST members
+│           ├── members/[memberId]/     # PATCH/DELETE member
+│           ├── integrations/github/    # POST/DELETE GitHub connection
+│           └── reports/                # generate/, latest/
+├── team/[slug]/            # Team dashboard pages (NEW)
+│   ├── page.tsx            # Main team weekly report view
+│   └── settings/page.tsx   # Team settings (GitHub, members)
+└── page.tsx                # Home — currently personal dashboard (needs update)
 
 lib/
-├── agents/                 # Multi-agent orchestration
-│   ├── coordinator.ts      # Master orchestrator
-│   ├── executor.ts         # Claude API interaction
-│   └── specialists/        # Domain-specific agents (github, jira, email, calendar)
-├── services/               # External API integrations
-│   ├── brief.ts            # Brief generation orchestration
+├── services/
+│   ├── brief.ts            # Personal brief generation (legacy)
 │   ├── claude.ts           # Claude API wrapper with Zod schemas
-│   ├── github.ts, jira.ts  # Tool integrations
-│   ├── nylas.ts            # Nylas OAuth & API wrapper
-│   └── tasks.ts            # Todo persistence
-├── store.ts                # Zustand state management
+│   ├── github.ts           # Personal GitHub integration (legacy)
+│   ├── team-auth.ts        # Team membership & admin checks (NEW)
+│   ├── team-github.ts      # Team GitHub data collection (NEW)
+│   └── team-report.ts      # Team weekly report generation (NEW)
+├── store.ts                # Zustand state (personal)
+├── team-store.ts           # Zustand state for teams (NEW)
+├── supabase.ts             # DB client + types (includes team types)
 └── cache.ts                # In-memory caching layer
 
 components/
-├── dashboard/              # Main dashboard components
+├── dashboard/              # Personal dashboard components (legacy)
+├── team/                   # Team UI components (NEW)
+│   ├── summary-banner.tsx  # Stats cards + AI summary
+│   ├── needs-attention.tsx # Stuck/blocked PR alerts
+│   ├── member-card.tsx     # Per-developer summary card
+│   ├── github-connect-form.tsx
+│   ├── member-management.tsx
+│   └── report-generate-button.tsx
 └── ui/                     # shadcn/ui component library
 ```
 
@@ -183,6 +209,42 @@ nylas_grants             # OAuth grants for Gmail/Calendar
 ├── email, provider (TEXT)
 ├── scopes (TEXT[])
 ├── created_at, last_sync (TIMESTAMPTZ)
+
+# --- Team tables (Phase 1 pivot) ---
+
+teams                    # Team organizational units
+├── id (UUID, PK)
+├── name (TEXT)
+├── slug (TEXT, UNIQUE)
+├── created_by (UUID, FK → users)
+├── created_at, updated_at (TIMESTAMPTZ)
+
+team_members             # Users belonging to teams
+├── id (UUID, PK)
+├── team_id (UUID, FK → teams, CASCADE)
+├── user_id (UUID, FK → users, CASCADE)
+├── role (TEXT: admin|member)
+├── github_username (TEXT, nullable)
+├── joined_at (TIMESTAMPTZ)
+├── UNIQUE(team_id, user_id)
+
+team_integrations        # Per-team tool connections (GitHub, Jira, Linear)
+├── id (UUID, PK)
+├── team_id (UUID, FK → teams, CASCADE)
+├── provider (TEXT: github|jira|linear)
+├── config (JSONB) — e.g. { org, token, repos_filter }
+├── connected_by (UUID, FK → users)
+├── connected_at (TIMESTAMPTZ)
+├── last_sync_at (TIMESTAMPTZ, nullable)
+├── UNIQUE(team_id, provider)
+
+weekly_reports           # Generated team weekly summaries
+├── id (UUID, PK)
+├── team_id (UUID, FK → teams, CASCADE)
+├── week_start (DATE)
+├── report_data (JSONB)
+├── generated_at (TIMESTAMPTZ)
+├── UNIQUE(team_id, week_start)
 ```
 
 ### When to Use MCP vs Code

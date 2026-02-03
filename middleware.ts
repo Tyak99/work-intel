@@ -15,6 +15,7 @@ const PROTECTED_API_PREFIXES = [
   '/api/brief',
   '/api/tasks',
   '/api/tools',
+  '/api/teams',
 ];
 
 export function middleware(request: NextRequest) {
