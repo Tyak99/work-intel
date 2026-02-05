@@ -18,6 +18,20 @@ interface TeamMember {
   };
 }
 
+interface TeamInvite {
+  id: string;
+  email: string;
+  role: 'admin' | 'member';
+  github_username: string | null;
+  created_at: string;
+  last_sent_at: string;
+  invited_by: string;
+  users?: {
+    display_name: string | null;
+    email: string;
+  };
+}
+
 interface TeamIntegration {
   id: string;
   team_id: string;
@@ -40,6 +54,7 @@ interface Team {
 interface TeamStore {
   team: Team | null;
   members: TeamMember[];
+  invites: TeamInvite[];
   integrations: TeamIntegration[];
   report: WeeklyReportData | null;
   isLoading: boolean;
@@ -48,8 +63,12 @@ interface TeamStore {
 
   fetchTeam: (teamId: string) => Promise<void>;
   fetchMembers: (teamId: string) => Promise<void>;
+  fetchInvites: (teamId: string) => Promise<void>;
   fetchLatestReport: (teamId: string) => Promise<void>;
   generateReport: (teamId: string) => Promise<void>;
+  sendInvite: (teamId: string, email: string, githubUsername?: string, role?: 'admin' | 'member') => Promise<void>;
+  resendInvite: (teamId: string, inviteId: string) => Promise<void>;
+  revokeInvite: (teamId: string, inviteId: string) => Promise<void>;
   addMember: (teamId: string, email: string, githubUsername?: string) => Promise<void>;
   removeMember: (teamId: string, memberId: string) => Promise<void>;
   updateMember: (teamId: string, memberId: string, updates: { github_username?: string; role?: string }) => Promise<void>;
@@ -61,6 +80,7 @@ interface TeamStore {
 export const useTeamStore = create<TeamStore>((set, get) => ({
   team: null,
   members: [],
+  invites: [],
   integrations: [],
   report: null,
   isLoading: true,
@@ -98,6 +118,26 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
     }
   },
 
+  fetchInvites: async (teamId: string) => {
+    try {
+      const response = await fetch(`/api/teams/${teamId}/invites`, { credentials: 'include' });
+      if (!response.ok) {
+        // Non-admins will get 403, which is expected
+        if (response.status === 403) {
+          set({ invites: [] });
+          return;
+        }
+        throw new Error('Failed to fetch invites');
+      }
+
+      const data = await response.json();
+      set({ invites: data.invites || [] });
+    } catch (error) {
+      console.error('Error fetching invites:', error);
+      set({ invites: [] });
+    }
+  },
+
   fetchLatestReport: async (teamId: string) => {
     try {
       const response = await fetch(`/api/teams/${teamId}/reports/latest`, { credentials: 'include' });
@@ -130,6 +170,71 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
       console.error('Error generating report:', error);
       toast.error(error.message || 'Failed to generate report');
       set({ isGeneratingReport: false });
+    }
+  },
+
+  sendInvite: async (teamId: string, email: string, githubUsername?: string, role?: 'admin' | 'member') => {
+    try {
+      const response = await fetch(`/api/teams/${teamId}/invites`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email, github_username: githubUsername, role: role || 'member' }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to send invite');
+      }
+
+      const data = await response.json();
+      // Refresh invites list
+      await get().fetchInvites(teamId);
+      toast.success(data.message || 'Invite sent!');
+    } catch (error: any) {
+      console.error('Error sending invite:', error);
+      toast.error(error.message || 'Failed to send invite');
+    }
+  },
+
+  resendInvite: async (teamId: string, inviteId: string) => {
+    try {
+      const response = await fetch(`/api/teams/${teamId}/invites/${inviteId}/resend`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to resend invite');
+      }
+
+      // Refresh invites list to update last_sent_at
+      await get().fetchInvites(teamId);
+      toast.success('Invite resent!');
+    } catch (error: any) {
+      console.error('Error resending invite:', error);
+      toast.error(error.message || 'Failed to resend invite');
+    }
+  },
+
+  revokeInvite: async (teamId: string, inviteId: string) => {
+    try {
+      const response = await fetch(`/api/teams/${teamId}/invites/${inviteId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to revoke invite');
+      }
+
+      set(state => ({ invites: state.invites.filter(i => i.id !== inviteId) }));
+      toast.success('Invite revoked');
+    } catch (error: any) {
+      console.error('Error revoking invite:', error);
+      toast.error(error.message || 'Failed to revoke invite');
     }
   },
 
@@ -249,6 +354,7 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
     set({
       team: null,
       members: [],
+      invites: [],
       integrations: [],
       report: null,
       isLoading: true,

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTeamStore } from '@/lib/team-store';
-import { UserPlus, Trash2, Edit2, Check, X, Loader2 } from 'lucide-react';
+import { UserPlus, Trash2, Edit2, Check, X, Loader2, Mail, Clock, RotateCcw } from 'lucide-react';
 
 interface MemberManagementProps {
   teamId: string;
@@ -21,22 +21,51 @@ interface MemberManagementProps {
   currentUserId: string;
 }
 
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
 export function MemberManagement({ teamId, members, isAdmin, currentUserId }: MemberManagementProps) {
-  const { addMember, removeMember, updateMember } = useTeamStore();
+  const { sendInvite, resendInvite, revokeInvite, fetchInvites, invites, removeMember, updateMember } = useTeamStore();
   const [newEmail, setNewEmail] = useState('');
   const [newGithub, setNewGithub] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editGithub, setEditGithub] = useState('');
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  useEffect(() => {
+    if (isAdmin) {
+      fetchInvites(teamId);
+    }
+  }, [isAdmin, teamId, fetchInvites]);
+
+  const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmail) return;
     setIsAdding(true);
-    await addMember(teamId, newEmail, newGithub || undefined);
+    await sendInvite(teamId, newEmail, newGithub || undefined);
     setIsAdding(false);
     setNewEmail('');
     setNewGithub('');
+  };
+
+  const handleResend = async (inviteId: string) => {
+    setResendingId(inviteId);
+    await resendInvite(teamId, inviteId);
+    setResendingId(null);
   };
 
   const handleStartEdit = (memberId: string, currentGithub: string | null) => {
@@ -119,9 +148,63 @@ export function MemberManagement({ teamId, members, isAdmin, currentUserId }: Me
         </div>
       </div>
 
-      {/* Add member form */}
+      {/* Pending Invites */}
+      {isAdmin && invites.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Mail className="w-4 h-4" />
+            Pending Invites ({invites.length})
+          </h4>
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 overflow-hidden">
+            <div className="divide-y divide-border">
+              {invites.map(invite => (
+                <div key={invite.id} className="px-4 py-3 flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-foreground truncate">{invite.email}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                        {invite.role}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                      <Clock className="w-3 h-3" />
+                      <span>Sent {formatRelativeTime(invite.last_sent_at)}</span>
+                      {invite.github_username && (
+                        <span className="ml-2">@{invite.github_username}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-3">
+                    <button
+                      onClick={() => handleResend(invite.id)}
+                      disabled={resendingId === invite.id}
+                      className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                      title="Resend invite"
+                    >
+                      {resendingId === invite.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <RotateCcw className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => revokeInvite(teamId, invite.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                      title="Revoke invite"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send invite form */}
       {isAdmin && (
-        <form onSubmit={handleAdd} className="flex items-end gap-2">
+        <form onSubmit={handleSendInvite} className="flex items-end gap-2">
           <div className="flex-1">
             <label className="block text-xs font-medium text-muted-foreground mb-1">Email</label>
             <input
@@ -147,8 +230,8 @@ export function MemberManagement({ teamId, members, isAdmin, currentUserId }: Me
             disabled={!newEmail || isAdding}
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-            Add
+            {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+            Send Invite
           </button>
         </form>
       )}

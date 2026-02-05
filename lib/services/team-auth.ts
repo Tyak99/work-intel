@@ -49,3 +49,39 @@ export async function requireTeamAdmin(teamId: string, userId: string): Promise<
   }
   return membership;
 }
+
+export interface TeamMemberWithEmail {
+  userId: string;
+  email: string;
+  displayName: string | null;
+  githubUsername: string | null;
+  role: 'admin' | 'member';
+}
+
+export async function getTeamMembersWithEmails(teamId: string): Promise<TeamMemberWithEmail[]> {
+  const { data, error } = await supabase
+    .from('team_members')
+    .select(`
+      user_id,
+      role,
+      github_username,
+      users!inner (
+        email,
+        display_name
+      )
+    `)
+    .eq('team_id', teamId);
+
+  if (error || !data) {
+    console.error('Error fetching team members with emails:', error);
+    return [];
+  }
+
+  return data.map((row: any) => ({
+    userId: row.user_id,
+    email: row.users.email,
+    displayName: row.users.display_name,
+    githubUsername: row.github_username,
+    role: row.role,
+  }));
+}

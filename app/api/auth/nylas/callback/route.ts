@@ -5,6 +5,8 @@ import {
   createSession,
   setSessionCookie,
   linkNylasGrantToUser,
+  processPendingInvite,
+  processInvitesByEmail,
 } from '@/lib/services/auth';
 
 function getBaseUrl(): string {
@@ -70,7 +72,30 @@ export async function GET(req: NextRequest) {
         // 4. Set the session cookie
         await setSessionCookie(sessionToken);
 
-        // 5. Redirect to dashboard with success message
+        // 5. Process any pending invites
+        // First check for invite token from cookie (user clicked invite link)
+        const inviteResult = await processPendingInvite(user.id);
+
+        // Also check for any invites by email (user signed up without clicking link)
+        const emailInviteResults = await processInvitesByEmail(user.id, grant.email);
+
+        // 6. Redirect to appropriate destination
+        // If user joined a team via invite, redirect to that team
+        if (inviteResult.processed && inviteResult.teamSlug) {
+          return NextResponse.redirect(
+            `${baseUrl}/team/${inviteResult.teamSlug}?joined=true`
+          );
+        }
+
+        // If user auto-joined team(s) via email, redirect to first one
+        const firstEmailJoin = emailInviteResults.find(r => r.processed && r.teamSlug);
+        if (firstEmailJoin?.teamSlug) {
+          return NextResponse.redirect(
+            `${baseUrl}/team/${firstEmailJoin.teamSlug}?joined=true`
+          );
+        }
+
+        // Default: redirect to dashboard
         return NextResponse.redirect(
           `${baseUrl}/?auth=success&email=${encodeURIComponent(grant.email)}&provider=${grant.provider}`
         );

@@ -191,3 +191,159 @@ export async function linkNylasGrantToUser(userId: string, grantUserId: string):
     console.error('Error linking Nylas grant to user:', error);
   }
 }
+
+const INVITE_TOKEN_COOKIE = 'pending_team_invite';
+
+export interface InviteProcessResult {
+  processed: boolean;
+  teamSlug?: string;
+  teamId?: string;
+}
+
+/**
+ * Process a pending invite from cookie token
+ * Called after OAuth to auto-join team if invite token is present
+ */
+export async function processPendingInvite(userId: string): Promise<InviteProcessResult> {
+  try {
+    const cookieStore = await cookies();
+    const inviteToken = cookieStore.get(INVITE_TOKEN_COOKIE)?.value;
+
+    if (!inviteToken) {
+      return { processed: false };
+    }
+
+    // Clear the cookie immediately
+    cookieStore.delete(INVITE_TOKEN_COOKIE);
+
+    // Find the invite
+    const { data: invite, error: inviteError } = await supabase
+      .from('team_invites')
+      .select(`
+        id,
+        team_id,
+        role,
+        github_username,
+        teams:team_id(slug)
+      `)
+      .eq('token', inviteToken)
+      .single();
+
+    if (inviteError || !invite) {
+      console.error('Invite not found for token');
+      return { processed: false };
+    }
+
+    const team = invite.teams as any;
+
+    // Check if already a member
+    const { data: existingMember } = await supabase
+      .from('team_members')
+      .select('id')
+      .eq('team_id', invite.team_id)
+      .eq('user_id', userId)
+      .single();
+
+    if (existingMember) {
+      // Already a member, just delete the invite
+      await supabase.from('team_invites').delete().eq('id', invite.id);
+      return { processed: true, teamSlug: team.slug, teamId: invite.team_id };
+    }
+
+    // Add user to team
+    const { error: memberError } = await supabase
+      .from('team_members')
+      .insert({
+        team_id: invite.team_id,
+        user_id: userId,
+        role: invite.role,
+        github_username: invite.github_username,
+      });
+
+    if (memberError) {
+      console.error('Error adding user to team:', memberError);
+      return { processed: false };
+    }
+
+    // Delete the invite
+    await supabase.from('team_invites').delete().eq('id', invite.id);
+
+    console.log(`User ${userId} joined team ${invite.team_id} via invite`);
+    return { processed: true, teamSlug: team.slug, teamId: invite.team_id };
+  } catch (error) {
+    console.error('Error processing pending invite:', error);
+    return { processed: false };
+  }
+}
+
+/**
+ * Process any pending invites by email (for users who sign up without clicking invite link)
+ * Called after OAuth to auto-join teams that have pending invites for this email
+ */
+export async function processInvitesByEmail(userId: string, email: string): Promise<InviteProcessResult[]> {
+  try {
+    // Find all pending invites for this email
+    const { data: invites, error } = await supabase
+      .from('team_invites')
+      .select(`
+        id,
+        team_id,
+        role,
+        github_username,
+        teams:team_id(slug)
+      `)
+      .eq('email', email);
+
+    if (error || !invites || invites.length === 0) {
+      return [];
+    }
+
+    const results: InviteProcessResult[] = [];
+
+    for (const invite of invites) {
+      const team = invite.teams as any;
+
+      // Check if already a member
+      const { data: existingMember } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('team_id', invite.team_id)
+        .eq('user_id', userId)
+        .single();
+
+      if (existingMember) {
+        // Already a member, just delete the invite
+        await supabase.from('team_invites').delete().eq('id', invite.id);
+        results.push({ processed: true, teamSlug: team.slug, teamId: invite.team_id });
+        continue;
+      }
+
+      // Add user to team
+      const { error: memberError } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: invite.team_id,
+          user_id: userId,
+          role: invite.role,
+          github_username: invite.github_username,
+        });
+
+      if (memberError) {
+        console.error(`Error adding user to team ${invite.team_id}:`, memberError);
+        results.push({ processed: false });
+        continue;
+      }
+
+      // Delete the invite
+      await supabase.from('team_invites').delete().eq('id', invite.id);
+
+      console.log(`User ${userId} auto-joined team ${invite.team_id} via email match`);
+      results.push({ processed: true, teamSlug: team.slug, teamId: invite.team_id });
+    }
+
+    return results;
+  } catch (error) {
+    console.error('Error processing invites by email:', error);
+    return [];
+  }
+}

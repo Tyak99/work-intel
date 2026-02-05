@@ -127,6 +127,18 @@ export interface WeeklyReportRow {
   generated_at: string;
 }
 
+export interface TeamInviteRow {
+  id: string;
+  team_id: string;
+  email: string;
+  role: 'admin' | 'member';
+  github_username: string | null;
+  token: string;
+  invited_by: string;
+  created_at: string;
+  last_sent_at: string;
+}
+
 export interface WeeklyReportData {
   teamSummary: {
     totalPRsMerged: number;

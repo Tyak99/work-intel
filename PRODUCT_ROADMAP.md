@@ -38,7 +38,7 @@ Phase 3: "Full Context" (Add Gmail/Calendar)
 
 ## Phase 1: Weekly Team Recap (CURRENT)
 
-### Status: ~70% COMPLETE — Core working, needs onboarding & email delivery
+### Status: COMPLETE ✓
 
 ### Goal
 An eng manager connects their GitHub org. Every team member gets a weekly summary. The manager gets a team-wide view. That's it. No other integrations.
@@ -69,20 +69,20 @@ An eng manager connects their GitHub org. Every team member gets a weekly summar
 
 #### 4. Team Management UI
 - [x] Team creation flow (name, connect GitHub org)
-- [x] Invite team members (email invite — requires existing user, see note below)
+- [x] Invite team members (email invites with auto-join on OAuth)
 - [x] Team settings page (manage members, GitHub config)
 - [x] Admin vs member permissions
 
 #### 5. Report Delivery
 - [x] Web dashboard: team view with per-person breakdown
-- [ ] Email delivery: Monday morning summary email
-- [ ] Individual view: "here's your week" for each developer
+- [x] Email delivery: Monday morning summary email (Resend + Vercel cron at 8 AM Monday)
+- [x] Individual view: "here's your week" for each developer (via personalized email template)
 
 #### 6. Onboarding Flow
-- [ ] Landing page / home showing teams list for authenticated users (not personal dashboard)
-- [ ] "Create a team" UI accessible from home page
-- [ ] Personal dashboard gated to `/personal` route, founder-email only
-- [ ] Team-first routing for new users
+- [x] Landing page / home showing teams list for authenticated users (not personal dashboard)
+- [x] "Create a team" UI accessible from home page (CreateTeamModal component)
+- [x] Personal dashboard gated to `/personal` route, founder-email only (FOUNDER_EMAIL env var)
+- [x] Team-first routing for new users
 
 ### UI Vision — What the Product Looks Like When Phase 1 Is Done
 
@@ -192,23 +192,31 @@ For Phase 1, the team admin provides a GitHub PAT with org read access. This is 
 
 > **For future Claude sessions**: Update this section with what you accomplished and what's next. Delete old notes once they're no longer relevant.
 
-### Latest Session: Feb 3, 2026
-- **What happened**: Major implementation sprint by another agent. The core team product is now functional:
-  - GitHub data collection service (`lib/services/team-github.ts`) — fetches PRs, reviews, commits, detects stuck/blocked PRs
-  - AI summary generation (`lib/services/team-report.ts`) — per-developer and team-level summaries using Claude
-  - Team dashboard UI (`app/team/[slug]/page.tsx`) — shows stats, AI summary, needs-attention alerts, per-person breakdowns
-  - Team settings page (`app/team/[slug]/settings/page.tsx`) — GitHub connection, member management
-  - 7 API endpoints for teams, members, integrations, and reports
-  - Team auth helpers (`lib/services/team-auth.ts`) — role-based access control
-- **What's DONE**: Sections 1-4 complete, Section 5 partial (web dashboard done, email not done)
-- **What's REMAINING** (to complete Phase 1):
-  1. **Onboarding/Navigation** — Update home page to show teams list instead of personal dashboard. Add "Create team" UI. Gate personal dashboard to `/personal` with founder-email check.
-  2. **Email delivery** — Send weekly summaries every Monday morning (to manager + individual devs)
-  3. **Individual developer view** — "Your week" page showing what they shipped/in-flight
-- **Known limitations**:
-  - Member invite requires user to already exist in DB (no email invite flow for new users yet)
-  - Reports are manual-trigger only (no scheduled cron yet)
-- **Open questions**: None blocking.
+### Latest Session: Feb 4, 2026
+- **What happened**: Implemented full team member invite system:
+  - Created `team_invites` database table with token-based invite tracking
+  - Added email invite template (`lib/email-templates/team-invite.ts`)
+  - Created 5 API endpoints:
+    - `GET/POST /api/teams/[teamId]/invites` — list and create invites
+    - `DELETE /api/teams/[teamId]/invites/[inviteId]` — revoke invite
+    - `POST /api/teams/[teamId]/invites/[inviteId]/resend` — resend email
+    - `GET /api/invites/[token]` — public accept link (stores cookie, redirects to OAuth)
+  - Modified OAuth callback to auto-join teams on login via `processPendingInvite()` and `processInvitesByEmail()`
+  - Updated Zustand store with invite state and actions
+  - Updated member-management UI with pending invites section, resend/revoke buttons
+- **Previous limitation resolved**: Admins can now invite new users by email before they sign up
+- **Edge cases handled**:
+  - User already a member → 409 error
+  - Same email invited twice → upserts, resends email
+  - User signs up without clicking link → auto-joins via email match
+  - Invite revoked after email sent → shows error on accept attempt
+- **What's NEXT**: Phase 2 — Standup Autopilot (Jira/Linear integration, daily cadence, Slack bot)
+
+### Previous: Feb 3, 2026 (evening)
+- PHASE 1 COMPLETE. Home page shows teams list, personal dashboard gated to `/personal`, email delivery via Resend + Vercel cron.
+
+### Previous: Feb 3, 2026 (earlier)
+- Core implementation: GitHub data collection, AI summaries, team dashboard, settings, 7 API endpoints
 
 ### Previous: Feb 2, 2026
 - Product strategy session. Created roadmap. Applied database migrations for team tables.
