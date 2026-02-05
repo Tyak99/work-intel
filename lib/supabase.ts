@@ -166,3 +166,23 @@ export interface WeeklyReportData {
     aiSummary: string;
   }>;
 }
+
+export interface AtlassianOAuthStateRow {
+  id: string;
+  team_id: string;
+  user_id: string;
+  state_token: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface JiraIntegrationConfig {
+  cloud_id: string;
+  site_url: string;
+  access_token: string;
+  refresh_token: string;
+  token_expiry: string;
+  scopes: string[];
+  connected_email: string;
+  project_key?: string;
+}

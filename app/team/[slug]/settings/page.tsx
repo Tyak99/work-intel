@@ -6,6 +6,7 @@ import { useTeamStore } from '@/lib/team-store';
 import { useDashboardStore } from '@/lib/store';
 import { NavHeader, TeamInfo } from '@/components/nav-header';
 import { GitHubConnectForm } from '@/components/team/github-connect-form';
+import { JiraConnectForm } from '@/components/team/jira-connect-form';
 import { MemberManagement } from '@/components/team/member-management';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -64,6 +65,7 @@ export default function TeamSettingsPage() {
   const currentMember = members.find(m => m.users?.id === user?.id);
   const isAdmin = currentMember?.role === 'admin';
   const githubIntegration = integrations.find(i => i.provider === 'github');
+  const jiraIntegration = integrations.find(i => i.provider === 'jira');
 
   return (
     <div className="min-h-screen bg-background">
@@ -89,6 +91,16 @@ export default function TeamSettingsPage() {
             teamId={teamId}
             isAdmin={isAdmin}
             currentIntegration={githubIntegration}
+          />
+        </section>
+
+        {/* Jira Integration */}
+        <section>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Jira Integration</h2>
+          <JiraConnectForm
+            teamId={teamId}
+            isAdmin={isAdmin}
+            currentIntegration={jiraIntegration}
           />
         </section>
 

@@ -51,6 +51,14 @@ interface Team {
   updated_at: string;
 }
 
+interface JiraProject {
+  id: string;
+  key: string;
+  name: string;
+  avatarUrl?: string;
+  projectTypeKey: string;
+}
+
 interface TeamStore {
   team: Team | null;
   members: TeamMember[];
@@ -60,6 +68,8 @@ interface TeamStore {
   isLoading: boolean;
   isGeneratingReport: boolean;
   currentUserRole: 'admin' | 'member' | null;
+  jiraProjects: JiraProject[];
+  isLoadingJiraProjects: boolean;
 
   fetchTeam: (teamId: string) => Promise<void>;
   fetchMembers: (teamId: string) => Promise<void>;
@@ -74,6 +84,9 @@ interface TeamStore {
   updateMember: (teamId: string, memberId: string, updates: { github_username?: string; role?: string }) => Promise<void>;
   connectGitHub: (teamId: string, token: string, org: string) => Promise<void>;
   disconnectGitHub: (teamId: string) => Promise<void>;
+  disconnectJira: (teamId: string) => Promise<void>;
+  fetchJiraProjects: (teamId: string) => Promise<void>;
+  setJiraProject: (teamId: string, projectKey: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -86,6 +99,8 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
   isLoading: true,
   isGeneratingReport: false,
   currentUserRole: null,
+  jiraProjects: [],
+  isLoadingJiraProjects: false,
 
   fetchTeam: async (teamId: string) => {
     set({ isLoading: true });
@@ -350,6 +365,78 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
     }
   },
 
+  disconnectJira: async (teamId: string) => {
+    try {
+      const response = await fetch('/api/auth/atlassian/disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ teamId }),
+      });
+
+      if (!response.ok) throw new Error('Failed to disconnect Jira');
+
+      set(state => ({
+        integrations: state.integrations.filter(i => i.provider !== 'jira'),
+        jiraProjects: [],
+      }));
+      toast.success('Jira disconnected');
+    } catch (error) {
+      console.error('Error disconnecting Jira:', error);
+      toast.error('Failed to disconnect Jira');
+    }
+  },
+
+  fetchJiraProjects: async (teamId: string) => {
+    set({ isLoadingJiraProjects: true });
+    try {
+      const response = await fetch(`/api/teams/${teamId}/jira/projects`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to fetch Jira projects');
+      }
+
+      const data = await response.json();
+      set({ jiraProjects: data.projects || [], isLoadingJiraProjects: false });
+    } catch (error: any) {
+      console.error('Error fetching Jira projects:', error);
+      set({ jiraProjects: [], isLoadingJiraProjects: false });
+      toast.error(error.message || 'Failed to fetch Jira projects');
+    }
+  },
+
+  setJiraProject: async (teamId: string, projectKey: string) => {
+    try {
+      const response = await fetch(`/api/teams/${teamId}/jira/project`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ projectKey }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to set Jira project');
+      }
+
+      // Update the integration config in state
+      set(state => ({
+        integrations: state.integrations.map(i =>
+          i.provider === 'jira'
+            ? { ...i, config: { ...i.config, project_key: projectKey } }
+            : i
+        ),
+      }));
+      toast.success('Jira project configured!');
+    } catch (error: any) {
+      console.error('Error setting Jira project:', error);
+      toast.error(error.message || 'Failed to set Jira project');
+    }
+  },
+
   reset: () => {
     set({
       team: null,
@@ -360,6 +447,8 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
       isLoading: true,
       isGeneratingReport: false,
       currentUserRole: null,
+      jiraProjects: [],
+      isLoadingJiraProjects: false,
     });
   },
 }));
