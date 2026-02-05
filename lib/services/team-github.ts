@@ -1,5 +1,5 @@
 import { Octokit } from '@octokit/rest';
-import { supabase } from '../supabase';
+import { getServiceSupabase } from '../supabase';
 import { decrypt } from '../utils/encryption';
 import { cache } from '../cache';
 
@@ -44,7 +44,7 @@ export async function fetchTeamGitHubData(teamId: string): Promise<TeamGitHubDat
   if (cached) return cached;
 
   // Get GitHub integration config
-  const { data: integration, error: intError } = await supabase
+  const { data: integration, error: intError } = await getServiceSupabase()
     .from('team_integrations')
     .select('config')
     .eq('team_id', teamId)
@@ -60,7 +60,7 @@ export async function fetchTeamGitHubData(teamId: string): Promise<TeamGitHubDat
   const octokit = new Octokit({ auth: token });
 
   // Get team members with github usernames
-  const { data: members } = await supabase
+  const { data: members } = await getServiceSupabase()
     .from('team_members')
     .select('github_username')
     .eq('team_id', teamId)

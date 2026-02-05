@@ -4,16 +4,22 @@ import { getCurrentUserId } from '@/lib/services/auth';
 
 export const dynamic = 'force-dynamic';
 
+function verifyCronSecret(request: NextRequest): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) return false;
+  const authHeader = request.headers.get('authorization');
+  return authHeader === `Bearer ${cronSecret}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // Check if this is a Vercel cron request
-    const cronHeader = req.headers.get('x-vercel-cron');
+    const isCron = verifyCronSecret(req);
 
     let userId: string | null = null;
 
-    if (cronHeader) {
+    if (isCron) {
       // Cron job - try to get userId from body, otherwise skip
-      console.log('Processing Vercel cron job request for daily brief generation');
+      console.log('Processing authenticated cron job request for daily brief generation');
       try {
         const body = await req.json();
         userId = body.userId;
@@ -49,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       brief,
-      generatedBy: cronHeader ? 'cron' : 'manual',
+      generatedBy: isCron ? 'cron' : 'manual',
     });
   } catch (error) {
     console.error('Error generating daily brief:', error);
@@ -62,9 +68,7 @@ export async function POST(req: NextRequest) {
 
 // Also handle GET requests for cron jobs (Vercel sometimes sends GET)
 export async function GET(req: NextRequest) {
-  const cronHeader = req.headers.get('x-vercel-cron');
-
-  if (cronHeader) {
+  if (verifyCronSecret(req)) {
     console.log('Processing GET cron request');
     return POST(req);
   }

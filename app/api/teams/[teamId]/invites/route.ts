@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamAdmin, getTeamById } from '@/lib/services/team-auth';
 import { sendTeamInviteEmail } from '@/lib/services/email';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getServiceSupabase()
       .from('team_invites')
       .select(`
         id,
@@ -80,14 +80,14 @@ export async function POST(
     }
 
     // Check if user is already a team member
-    const { data: existingUser } = await supabase
+    const { data: existingUser } = await getServiceSupabase()
       .from('users')
       .select('id')
       .eq('email', email)
       .single();
 
     if (existingUser) {
-      const { data: existingMember } = await supabase
+      const { data: existingMember } = await getServiceSupabase()
         .from('team_members')
         .select('id')
         .eq('team_id', teamId)
@@ -100,7 +100,7 @@ export async function POST(
     }
 
     // Check if invite already exists (upsert)
-    const { data: existingInvite } = await supabase
+    const { data: existingInvite } = await getServiceSupabase()
       .from('team_invites')
       .select('id, token')
       .eq('team_id', teamId)
@@ -112,7 +112,7 @@ export async function POST(
 
     if (existingInvite) {
       // Update existing invite
-      const { data: updatedInvite, error: updateError } = await supabase
+      const { data: updatedInvite, error: updateError } = await getServiceSupabase()
         .from('team_invites')
         .update({
           role: validRole,
@@ -150,7 +150,7 @@ export async function POST(
     // Create new invite
     const token = crypto.randomBytes(32).toString('hex');
 
-    const { data: invite, error: insertError } = await supabase
+    const { data: invite, error: insertError } = await getServiceSupabase()
       .from('team_invites')
       .insert({
         team_id: teamId,

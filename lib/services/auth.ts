@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { supabase, UserRow, SessionRow } from '../supabase';
+import { getServiceSupabase, UserRow, SessionRow } from '../supabase';
 import crypto from 'crypto';
 
 const SESSION_COOKIE_NAME = 'work_intel_session';
@@ -16,7 +16,7 @@ export interface AuthUser {
  */
 export async function findOrCreateUser(email: string, displayName?: string): Promise<UserRow> {
   // Try to find existing user
-  const { data: existingUser, error: findError } = await supabase
+  const { data: existingUser, error: findError } = await getServiceSupabase()
     .from('users')
     .select('*')
     .eq('email', email)
@@ -24,7 +24,7 @@ export async function findOrCreateUser(email: string, displayName?: string): Pro
 
   if (existingUser && !findError) {
     // Update last login
-    await supabase
+    await getServiceSupabase()
       .from('users')
       .update({ last_login_at: new Date().toISOString() })
       .eq('id', existingUser.id);
@@ -33,7 +33,7 @@ export async function findOrCreateUser(email: string, displayName?: string): Pro
   }
 
   // Create new user
-  const { data: newUser, error: createError } = await supabase
+  const { data: newUser, error: createError } = await getServiceSupabase()
     .from('users')
     .insert({
       email,
@@ -58,7 +58,7 @@ export async function createSession(userId: string): Promise<string> {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + SESSION_DURATION_DAYS);
 
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('sessions')
     .insert({
       user_id: userId,
@@ -78,7 +78,7 @@ export async function createSession(userId: string): Promise<string> {
  * Validate a session token and return the user
  */
 export async function validateSession(token: string): Promise<AuthUser | null> {
-  const { data: session, error } = await supabase
+  const { data: session, error } = await getServiceSupabase()
     .from('sessions')
     .select(`
       *,
@@ -94,7 +94,7 @@ export async function validateSession(token: string): Promise<AuthUser | null> {
   // Check if session is expired
   if (new Date(session.expires_at) < new Date()) {
     // Clean up expired session
-    await supabase.from('sessions').delete().eq('id', session.id);
+    await getServiceSupabase().from('sessions').delete().eq('id', session.id);
     return null;
   }
 
@@ -154,7 +154,7 @@ export async function setSessionCookie(token: string): Promise<void> {
  * Destroy a session (logout)
  */
 export async function destroySession(token: string): Promise<void> {
-  await supabase.from('sessions').delete().eq('token', token);
+  await getServiceSupabase().from('sessions').delete().eq('token', token);
 }
 
 /**
@@ -182,7 +182,7 @@ export async function getSessionToken(): Promise<string | null> {
  * Link a Nylas grant to a user
  */
 export async function linkNylasGrantToUser(userId: string, grantUserId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('nylas_grants')
     .update({ user_uuid: userId })
     .eq('user_id', grantUserId);
@@ -217,7 +217,7 @@ export async function processPendingInvite(userId: string): Promise<InviteProces
     cookieStore.delete(INVITE_TOKEN_COOKIE);
 
     // Find the invite
-    const { data: invite, error: inviteError } = await supabase
+    const { data: invite, error: inviteError } = await getServiceSupabase()
       .from('team_invites')
       .select(`
         id,
@@ -237,7 +237,7 @@ export async function processPendingInvite(userId: string): Promise<InviteProces
     const team = invite.teams as any;
 
     // Check if already a member
-    const { data: existingMember } = await supabase
+    const { data: existingMember } = await getServiceSupabase()
       .from('team_members')
       .select('id')
       .eq('team_id', invite.team_id)
@@ -246,12 +246,12 @@ export async function processPendingInvite(userId: string): Promise<InviteProces
 
     if (existingMember) {
       // Already a member, just delete the invite
-      await supabase.from('team_invites').delete().eq('id', invite.id);
+      await getServiceSupabase().from('team_invites').delete().eq('id', invite.id);
       return { processed: true, teamSlug: team.slug, teamId: invite.team_id };
     }
 
     // Add user to team
-    const { error: memberError } = await supabase
+    const { error: memberError } = await getServiceSupabase()
       .from('team_members')
       .insert({
         team_id: invite.team_id,
@@ -266,7 +266,7 @@ export async function processPendingInvite(userId: string): Promise<InviteProces
     }
 
     // Delete the invite
-    await supabase.from('team_invites').delete().eq('id', invite.id);
+    await getServiceSupabase().from('team_invites').delete().eq('id', invite.id);
 
     console.log(`User ${userId} joined team ${invite.team_id} via invite`);
     return { processed: true, teamSlug: team.slug, teamId: invite.team_id };
@@ -283,7 +283,7 @@ export async function processPendingInvite(userId: string): Promise<InviteProces
 export async function processInvitesByEmail(userId: string, email: string): Promise<InviteProcessResult[]> {
   try {
     // Find all pending invites for this email
-    const { data: invites, error } = await supabase
+    const { data: invites, error } = await getServiceSupabase()
       .from('team_invites')
       .select(`
         id,
@@ -304,7 +304,7 @@ export async function processInvitesByEmail(userId: string, email: string): Prom
       const team = invite.teams as any;
 
       // Check if already a member
-      const { data: existingMember } = await supabase
+      const { data: existingMember } = await getServiceSupabase()
         .from('team_members')
         .select('id')
         .eq('team_id', invite.team_id)
@@ -313,13 +313,13 @@ export async function processInvitesByEmail(userId: string, email: string): Prom
 
       if (existingMember) {
         // Already a member, just delete the invite
-        await supabase.from('team_invites').delete().eq('id', invite.id);
+        await getServiceSupabase().from('team_invites').delete().eq('id', invite.id);
         results.push({ processed: true, teamSlug: team.slug, teamId: invite.team_id });
         continue;
       }
 
       // Add user to team
-      const { error: memberError } = await supabase
+      const { error: memberError } = await getServiceSupabase()
         .from('team_members')
         .insert({
           team_id: invite.team_id,
@@ -335,7 +335,7 @@ export async function processInvitesByEmail(userId: string, email: string): Prom
       }
 
       // Delete the invite
-      await supabase.from('team_invites').delete().eq('id', invite.id);
+      await getServiceSupabase().from('team_invites').delete().eq('id', invite.id);
 
       console.log(`User ${userId} auto-joined team ${invite.team_id} via email match`);
       results.push({ processed: true, teamSlug: team.slug, teamId: invite.team_id });

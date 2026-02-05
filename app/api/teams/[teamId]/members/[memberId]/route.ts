@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamAdmin } from '@/lib/services/team-auth';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,14 +23,14 @@ export async function DELETE(
     }
 
     // Don't allow removing yourself if you're the only admin
-    const { data: member } = await supabase
+    const { data: member } = await getServiceSupabase()
       .from('team_members')
       .select('user_id, role')
       .eq('id', memberId)
       .single();
 
     if (member?.role === 'admin') {
-      const { count } = await supabase
+      const { count } = await getServiceSupabase()
         .from('team_members')
         .select('id', { count: 'exact', head: true })
         .eq('team_id', teamId)
@@ -41,7 +41,7 @@ export async function DELETE(
       }
     }
 
-    const { error } = await supabase
+    const { error } = await getServiceSupabase()
       .from('team_members')
       .delete()
       .eq('id', memberId)
@@ -89,7 +89,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 });
     }
 
-    const { data: member, error } = await supabase
+    const { data: member, error } = await getServiceSupabase()
       .from('team_members')
       .update(updates)
       .eq('id', memberId)

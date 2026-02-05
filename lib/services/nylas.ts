@@ -1,5 +1,5 @@
 import Nylas from 'nylas';
-import { supabase } from '../supabase';
+import { getServiceSupabase } from '../supabase';
 
 export interface NylasGrant {
   grantId: string;
@@ -151,7 +151,7 @@ export async function exchangeCodeForGrant(code: string, userId: string): Promis
       upsertData.user_uuid = userId;
     }
 
-    const { error } = await supabase
+    const { error } = await getServiceSupabase()
       .from('nylas_grants')
       .upsert(upsertData);
 
@@ -173,7 +173,7 @@ export async function getUserGrant(userId: string): Promise<NylasGrant | null> {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
 
     // Try to find by user_uuid first (new system), then fall back to user_id (legacy)
-    let query = supabase.from('nylas_grants').select('*');
+    let query = getServiceSupabase().from('nylas_grants').select('*');
 
     if (isUUID) {
       query = query.eq('user_uuid', userId);
@@ -187,7 +187,7 @@ export async function getUserGrant(userId: string): Promise<NylasGrant | null> {
       if (error.code === 'PGRST116') {
         // No grant found with user_uuid, try user_id as fallback
         if (isUUID) {
-          const { data: fallbackData, error: fallbackError } = await supabase
+          const { data: fallbackData, error: fallbackError } = await getServiceSupabase()
             .from('nylas_grants')
             .select('*')
             .eq('user_id', userId)
@@ -228,7 +228,7 @@ export async function getUserGrant(userId: string): Promise<NylasGrant | null> {
 
 export async function setUserGrant(userId: string, grant: NylasGrant): Promise<void> {
   try {
-    const { error } = await supabase
+    const { error } = await getServiceSupabase()
       .from('nylas_grants')
       .upsert({
         user_id: userId,
@@ -268,7 +268,7 @@ export async function revokeGrant(userId: string): Promise<void> {
     // Delete from Supabase - try both user_uuid and user_id
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
 
-    let deleteQuery = supabase.from('nylas_grants').delete();
+    let deleteQuery = getServiceSupabase().from('nylas_grants').delete();
     if (isUUID) {
       deleteQuery = deleteQuery.eq('user_uuid', userId);
     } else {
@@ -313,7 +313,7 @@ export async function updateLastSync(userId: string): Promise<void> {
   try {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
 
-    let updateQuery = supabase
+    let updateQuery = getServiceSupabase()
       .from('nylas_grants')
       .update({ last_sync: new Date().toISOString() });
 

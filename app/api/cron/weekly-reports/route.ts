@@ -11,19 +11,12 @@ export const maxDuration = 300; // 5 minutes max for processing all teams
 function verifyCronSecret(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
-    console.warn('CRON_SECRET not configured, allowing request');
-    return true;
+    console.error('CRON_SECRET not configured, denying request');
+    return false;
   }
 
   const authHeader = request.headers.get('authorization');
   if (authHeader === `Bearer ${cronSecret}`) {
-    return true;
-  }
-
-  // Vercel cron uses this header
-  const vercelCronHeader = request.headers.get('x-vercel-cron-signature');
-  if (vercelCronHeader) {
-    // In production, Vercel handles cron auth via this header
     return true;
   }
 

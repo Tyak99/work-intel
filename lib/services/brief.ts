@@ -8,7 +8,7 @@ import { Brief } from '@/lib/types';
 import { cache, cacheKeys } from '../cache';
 import { getUserGrant } from './nylas';
 import { getUserDriveGrant } from './google-drive';
-import { supabase } from '../supabase';
+import { getServiceSupabase } from '../supabase';
 
 /**
  * Save a brief to the database
@@ -16,7 +16,7 @@ import { supabase } from '../supabase';
 export async function saveBriefToDatabase(userId: string, brief: Brief): Promise<void> {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
 
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('briefs')
     .upsert({
       user_id: userId,
@@ -41,7 +41,7 @@ export async function saveBriefToDatabase(userId: string, brief: Brief): Promise
 export async function getBriefFromDatabase(userId: string, date?: string): Promise<Brief | null> {
   const targetDate = date || new Date().toISOString().split('T')[0];
 
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('briefs')
     .select('*')
     .eq('user_id', userId)
@@ -64,7 +64,7 @@ export async function getBriefFromDatabase(userId: string, date?: string): Promi
  * Get brief history for a user (last 30 days)
  */
 export async function getBriefHistory(userId: string, limit: number = 30): Promise<{ date: string; brief: Brief }[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('briefs')
     .select('brief_date, content')
     .eq('user_id', userId)

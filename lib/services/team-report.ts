@@ -1,7 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
-import { supabase } from '../supabase';
-import { WeeklyReportData } from '../supabase';
+import { getServiceSupabase, WeeklyReportData } from '../supabase';
 import { fetchTeamGitHubData, TeamGitHubData } from './team-github';
 
 const TeamAISummarySchema = z.object({
@@ -174,7 +173,7 @@ export async function saveWeeklyReport(teamId: string, report: WeeklyReportData)
   const weekStart = new Date(now.setDate(diff));
   const weekStartStr = weekStart.toISOString().split('T')[0];
 
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('weekly_reports')
     .upsert({
       team_id: teamId,
@@ -191,7 +190,7 @@ export async function saveWeeklyReport(teamId: string, report: WeeklyReportData)
 }
 
 export async function getLatestWeeklyReport(teamId: string): Promise<WeeklyReportData | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('weekly_reports')
     .select('report_data')
     .eq('team_id', teamId)

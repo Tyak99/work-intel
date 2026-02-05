@@ -9,7 +9,11 @@ const PUBLIC_ROUTES = [
   '/api/auth/nylas/callback',
   '/api/auth/google-drive/callback',
   '/api/cron/weekly-reports',
+  '/api/health',
 ];
+
+// Page routes accessible without authentication (landing page, etc.)
+const PUBLIC_PAGES = ['/'];
 
 // API routes that require authentication
 const PROTECTED_API_PREFIXES = [
@@ -60,6 +64,11 @@ export function middleware(request: NextRequest) {
         { status: 401 }
       );
     }
+    return NextResponse.next();
+  }
+
+  // Allow public pages (landing page, etc.)
+  if (PUBLIC_PAGES.includes(pathname)) {
     return NextResponse.next();
   }
 

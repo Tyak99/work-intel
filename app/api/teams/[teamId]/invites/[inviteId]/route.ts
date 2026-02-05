@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamAdmin } from '@/lib/services/team-auth';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +23,7 @@ export async function DELETE(
     }
 
     // Verify invite belongs to team
-    const { data: invite } = await supabase
+    const { data: invite } = await getServiceSupabase()
       .from('team_invites')
       .select('id')
       .eq('id', inviteId)
@@ -34,7 +34,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invite not found' }, { status: 404 });
     }
 
-    const { error } = await supabase
+    const { error } = await getServiceSupabase()
       .from('team_invites')
       .delete()
       .eq('id', inviteId);

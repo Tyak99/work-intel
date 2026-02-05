@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/services/auth';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,13 +18,13 @@ export async function POST(req: NextRequest) {
     const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
     // Check slug uniqueness
-    const { data: existing } = await supabase.from('teams').select('id').eq('slug', slug).single();
+    const { data: existing } = await getServiceSupabase().from('teams').select('id').eq('slug', slug).single();
     if (existing) {
       return NextResponse.json({ error: 'A team with this name already exists' }, { status: 409 });
     }
 
     // Create team
-    const { data: team, error: teamError } = await supabase
+    const { data: team, error: teamError } = await getServiceSupabase()
       .from('teams')
       .insert({ name: name.trim(), slug, created_by: user.id })
       .select()
@@ -36,14 +36,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Add creator as admin
-    const { error: memberError } = await supabase
+    const { error: memberError } = await getServiceSupabase()
       .from('team_members')
       .insert({ team_id: team.id, user_id: user.id, role: 'admin' });
 
     if (memberError) {
       console.error('Error adding creator as admin:', memberError);
       // Clean up team if member insert fails
-      await supabase.from('teams').delete().eq('id', team.id);
+      await getServiceSupabase().from('teams').delete().eq('id', team.id);
       return NextResponse.json({ error: 'Failed to create team' }, { status: 500 });
     }
 
@@ -61,7 +61,7 @@ export async function GET() {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     // Get user's team memberships with team details
-    const { data: memberships, error } = await supabase
+    const { data: memberships, error } = await getServiceSupabase()
       .from('team_members')
       .select('team_id, role, teams(*)')
       .eq('user_id', user.id);
@@ -79,7 +79,7 @@ export async function GET() {
     const teamIds = memberships.map(m => m.team_id);
 
     // Get member counts for all teams
-    const { data: memberCounts, error: memberCountError } = await supabase
+    const { data: memberCounts, error: memberCountError } = await getServiceSupabase()
       .from('team_members')
       .select('team_id')
       .in('team_id', teamIds);
@@ -95,7 +95,7 @@ export async function GET() {
     });
 
     // Get latest report for each team
-    const { data: reports, error: reportsError } = await supabase
+    const { data: reports, error: reportsError } = await getServiceSupabase()
       .from('weekly_reports')
       .select('team_id, generated_at')
       .in('team_id', teamIds)

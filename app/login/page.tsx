@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Mail, Sparkles, Shield, Zap, Activity } from 'lucide-react';
+import { Mail, Users, GitPullRequest, Zap, Activity } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/components/theme-provider';
@@ -85,33 +85,33 @@ export default function LoginPage() {
                     <Zap className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm text-foreground">Daily Briefs</h3>
+                    <h3 className="font-semibold text-sm text-foreground">Weekly Team Reports</h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      AI-powered summaries from Jira, GitHub, and email
+                      AI-powered summaries of what your team shipped, what&apos;s stuck, and what needs attention
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-4 group">
                   <div className="p-2 rounded bg-[hsl(var(--status-info-muted))] text-[hsl(var(--status-info))] border border-[hsl(var(--status-info)/0.2)] group-hover:border-[hsl(var(--status-info)/0.4)] transition-colors">
-                    <Sparkles className="h-5 w-5" />
+                    <GitPullRequest className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm text-foreground">Smart Actions</h3>
+                    <h3 className="font-semibold text-sm text-foreground">GitHub Activity at a Glance</h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      AI-drafted replies, PR nudges, and meeting prep
+                      PRs merged, code reviews, commits &mdash; all summarized per team member
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-4 group">
                   <div className="p-2 rounded bg-[hsl(var(--status-success-muted))] text-[hsl(var(--status-success))] border border-[hsl(var(--status-success)/0.2)] group-hover:border-[hsl(var(--status-success)/0.4)] transition-colors">
-                    <Shield className="h-5 w-5" />
+                    <Users className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-sm text-foreground">Secure & Private</h3>
+                    <h3 className="font-semibold text-sm text-foreground">Zero Setup for Members</h3>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Read-only access. Your data stays private.
+                      One admin connects GitHub, the whole team gets value. No individual setup required.
                     </p>
                   </div>
                 </div>

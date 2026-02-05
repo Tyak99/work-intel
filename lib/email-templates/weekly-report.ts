@@ -4,6 +4,7 @@ interface EmailContext {
   teamName: string;
   weekStartDate: string;
   dashboardUrl: string;
+  teamSettingsUrl?: string;
 }
 
 function formatDate(dateStr: string): string {
@@ -211,7 +212,8 @@ export function buildManagerEmailHtml(
   context: EmailContext
 ): string {
   const { teamSummary, needsAttention, memberSummaries } = report;
-  const { teamName, weekStartDate, dashboardUrl } = context;
+  const { teamName, weekStartDate, dashboardUrl, teamSettingsUrl } = context;
+  const unsubscribeUrl = teamSettingsUrl || dashboardUrl;
 
   const needsAttentionHtml = needsAttention.length > 0
     ? `
@@ -296,6 +298,11 @@ export function buildManagerEmailHtml(
 
     <div class="footer">
       <p>Sent by <a href="https://work-intel.vercel.app">Work Intel</a></p>
+      <p style="margin-top: 8px; font-size: 12px;">
+        <a href="${escapeHtml(unsubscribeUrl)}" style="color: #888;">Unsubscribe from these emails</a>
+      </p>
+      <!-- TODO: Add physical mailing address for full CAN-SPAM compliance -->
+      <p style="margin-top: 4px; font-size: 11px; color: #bbb;">Work Intel</p>
     </div>
   </div>
 </body>
@@ -308,7 +315,8 @@ export function buildDeveloperEmailHtml(
   githubUsername: string,
   context: EmailContext
 ): string {
-  const { teamName, weekStartDate, dashboardUrl } = context;
+  const { teamName, weekStartDate, dashboardUrl, teamSettingsUrl } = context;
+  const unsubscribeUrl = teamSettingsUrl || dashboardUrl;
 
   const memberData = report.memberSummaries.find(
     m => m.githubUsername === githubUsername
@@ -422,6 +430,11 @@ export function buildDeveloperEmailHtml(
 
     <div class="footer">
       <p>Sent by <a href="https://work-intel.vercel.app">Work Intel</a></p>
+      <p style="margin-top: 8px; font-size: 12px;">
+        <a href="${escapeHtml(unsubscribeUrl)}" style="color: #888;">Unsubscribe from these emails</a>
+      </p>
+      <!-- TODO: Add physical mailing address for full CAN-SPAM compliance -->
+      <p style="margin-top: 4px; font-size: 11px; color: #bbb;">Work Intel</p>
     </div>
   </div>
 </body>

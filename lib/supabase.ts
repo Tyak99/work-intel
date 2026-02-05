@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
@@ -7,7 +7,30 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please add SUPABASE_URL and SUPABASE_ANON_KEY to your .env.local file.');
 }
 
+// Anon client — only for use in client-side code (if needed in the future)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Service role client — use this for all server-side API route database access.
+// Bypasses RLS; should NEVER be exposed to the browser.
+let _serviceClient: SupabaseClient | null = null;
+
+export function getServiceSupabase(): SupabaseClient {
+  if (_serviceClient) return _serviceClient;
+
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    console.warn('SUPABASE_SERVICE_ROLE_KEY not set, falling back to anon client');
+    return supabase;
+  }
+
+  _serviceClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+  return _serviceClient;
+}
 
 // Database types for our tables
 export interface UserRow {

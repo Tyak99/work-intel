@@ -1,5 +1,5 @@
 import { Brief, Todo } from '@/lib/types';
-import { supabase, TaskRow } from '../supabase';
+import { getServiceSupabase, TaskRow } from '../supabase';
 
 /**
  * Convert a database row to a Todo object
@@ -20,7 +20,7 @@ function taskRowToTodo(row: TaskRow): Todo {
 }
 
 export async function getTasks(userId: string, date?: string | null): Promise<Todo[]> {
-  let query = supabase
+  let query = getServiceSupabase()
     .from('tasks')
     .select('*')
     .eq('user_id', userId)
@@ -44,7 +44,7 @@ export async function getTasks(userId: string, date?: string | null): Promise<To
 }
 
 export async function createTask(userId: string, taskData: Omit<Todo, 'id' | 'createdAt'>): Promise<Todo> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('tasks')
     .insert({
       user_id: userId,
@@ -82,7 +82,7 @@ export async function updateTask(userId: string, taskId: string, updates: Partia
   if (updates.url !== undefined) updateData.url = updates.url;
   if (updates.dueDate !== undefined) updateData.due_date = updates.dueDate?.toISOString() || null;
 
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('tasks')
     .update(updateData)
     .eq('id', taskId)
@@ -99,7 +99,7 @@ export async function updateTask(userId: string, taskId: string, updates: Partia
 }
 
 export async function deleteTask(userId: string, taskId: string): Promise<boolean> {
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('tasks')
     .delete()
     .eq('id', taskId)

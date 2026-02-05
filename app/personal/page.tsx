@@ -56,11 +56,8 @@ export default function PersonalPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="absolute -inset-1 rounded-full bg-primary/20 blur animate-pulse" />
-            <div className="relative h-12 w-12 rounded-full border-2 border-primary/50 border-t-transparent animate-spin" />
-          </div>
-          <p className="font-mono text-sm text-primary animate-pulse tracking-widest uppercase">
+          <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/30 border-t-primary animate-spin" />
+          <p className="text-sm text-muted-foreground">
             Loading...
           </p>
         </div>

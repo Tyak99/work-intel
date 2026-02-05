@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,7 @@ export async function GET(
     const { token } = await params;
 
     // Validate token exists
-    const { data: invite, error } = await supabase
+    const { data: invite, error } = await getServiceSupabase()
       .from('team_invites')
       .select(`
         id,

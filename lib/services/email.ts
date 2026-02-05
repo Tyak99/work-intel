@@ -1,5 +1,5 @@
 import { Resend } from 'resend';
-import { supabase, WeeklyReportData } from '../supabase';
+import { getServiceSupabase, WeeklyReportData } from '../supabase';
 import { getTeamMembersWithEmails, getTeamById } from './team-auth';
 import { generateWeeklyReport, getLatestWeeklyReport } from './team-report';
 import {
@@ -110,7 +110,7 @@ export async function sendWeeklyReportsForTeam(teamId: string): Promise<TeamEmai
   const today = new Date().toISOString().split('T')[0];
 
   // Check if we need to generate a new report
-  const { data: reportRow } = await supabase
+  const { data: reportRow } = await getServiceSupabase()
     .from('weekly_reports')
     .select('generated_at')
     .eq('team_id', teamId)
@@ -155,7 +155,7 @@ export async function sendWeeklyReportsForTeam(teamId: string): Promise<TeamEmai
 }
 
 export async function getTeamsWithGitHubIntegration(): Promise<Array<{ teamId: string; teamName: string }>> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('team_integrations')
     .select(`
       team_id,

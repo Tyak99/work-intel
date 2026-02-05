@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamAdmin, getTeamById } from '@/lib/services/team-auth';
 import { sendTeamInviteEmail } from '@/lib/services/email';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +24,7 @@ export async function POST(
     }
 
     // Get invite details
-    const { data: invite, error: fetchError } = await supabase
+    const { data: invite, error: fetchError } = await getServiceSupabase()
       .from('team_invites')
       .select('*')
       .eq('id', inviteId)
@@ -57,7 +57,7 @@ export async function POST(
     }
 
     // Update last_sent_at
-    const { error: updateError } = await supabase
+    const { error: updateError } = await getServiceSupabase()
       .from('team_invites')
       .update({ last_sent_at: new Date().toISOString() })
       .eq('id', inviteId);

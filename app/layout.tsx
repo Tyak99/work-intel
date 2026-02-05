@@ -16,15 +16,26 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Work Intel | Mission Control',
-  description: 'Your intelligent work assistant for Jira, GitHub, and more',
+  title: 'Work Intel | Engineering Team Intelligence',
+  description: 'AI-powered weekly team reports from your GitHub activity. See what shipped, what\'s stuck, and what needs attention.',
+  openGraph: {
+    title: 'Work Intel | Engineering Team Intelligence',
+    description: 'AI-powered weekly team reports from your GitHub activity. See what shipped, what\'s stuck, and what needs attention.',
+    type: 'website',
+    siteName: 'Work Intel',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Work Intel | Engineering Team Intelligence',
+    description: 'AI-powered weekly team reports from your GitHub activity. See what shipped, what\'s stuck, and what needs attention.',
+  },
 };
 
 // Script to prevent theme flash - runs before React hydrates
 const themeScript = `
   (function() {
     try {
-      var theme = localStorage.getItem('work-intel-theme') || 'future';
+      var theme = localStorage.getItem('work-intel-theme') || 'original';
       var root = document.documentElement;
       root.classList.add('theme-' + theme);
       if (theme === 'future') {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamAdmin } from '@/lib/services/team-auth';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 import { encrypt } from '@/lib/utils/encryption';
 import { Octokit } from '@octokit/rest';
 
@@ -43,7 +43,7 @@ export async function POST(
     // Encrypt and store
     const encryptedToken = encrypt(token);
 
-    const { data, error } = await supabase
+    const { data, error } = await getServiceSupabase()
       .from('team_integrations')
       .upsert({
         team_id: teamId,
@@ -86,7 +86,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const { error } = await supabase
+    const { error } = await getServiceSupabase()
       .from('team_integrations')
       .delete()
       .eq('team_id', teamId)

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamMembership, requireTeamAdmin } from '@/lib/services/team-auth';
-import { supabase } from '@/lib/supabase';
+import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getServiceSupabase()
       .from('team_members')
       .select('*, users:user_id(id, email, display_name)')
       .eq('team_id', teamId);
@@ -61,7 +61,7 @@ export async function POST(
     }
 
     // Find user by email
-    const { data: targetUser } = await supabase
+    const { data: targetUser } = await getServiceSupabase()
       .from('users')
       .select('id')
       .eq('email', email)
@@ -72,7 +72,7 @@ export async function POST(
     }
 
     // Check if already a member
-    const { data: existingMember } = await supabase
+    const { data: existingMember } = await getServiceSupabase()
       .from('team_members')
       .select('id')
       .eq('team_id', teamId)
@@ -83,7 +83,7 @@ export async function POST(
       return NextResponse.json({ error: 'User is already a team member' }, { status: 409 });
     }
 
-    const { data: member, error } = await supabase
+    const { data: member, error } = await getServiceSupabase()
       .from('team_members')
       .insert({
         team_id: teamId,

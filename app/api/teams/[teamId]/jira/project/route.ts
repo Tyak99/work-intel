@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/services/auth';
-import { requireTeamAdmin } from '@/lib/services/team-auth';
+import { requireTeamAdmin, requireTeamMembership } from '@/lib/services/team-auth';
 import { updateJiraProjectKey, getJiraIntegrationConfig } from '@/lib/services/atlassian-oauth';
 
 export async function POST(
@@ -66,6 +66,13 @@ export async function GET(
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify team membership
+    try {
+      await requireTeamMembership(teamId, user.id);
+    } catch {
+      return NextResponse.json({ error: 'Not a team member' }, { status: 403 });
     }
 
     const config = await getJiraIntegrationConfig(teamId);

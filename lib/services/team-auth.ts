@@ -1,7 +1,7 @@
-import { supabase, TeamRow, TeamMemberRow } from '../supabase';
+import { getServiceSupabase, TeamRow, TeamMemberRow } from '../supabase';
 
 export async function getTeamBySlug(slug: string): Promise<TeamRow | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('teams')
     .select('*')
     .eq('slug', slug)
@@ -12,7 +12,7 @@ export async function getTeamBySlug(slug: string): Promise<TeamRow | null> {
 }
 
 export async function getTeamById(teamId: string): Promise<TeamRow | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('teams')
     .select('*')
     .eq('id', teamId)
@@ -23,7 +23,7 @@ export async function getTeamById(teamId: string): Promise<TeamRow | null> {
 }
 
 export async function getTeamMembership(teamId: string, userId: string): Promise<TeamMemberRow | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('team_members')
     .select('*')
     .eq('team_id', teamId)
@@ -59,7 +59,7 @@ export interface TeamMemberWithEmail {
 }
 
 export async function getTeamMembersWithEmails(teamId: string): Promise<TeamMemberWithEmail[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('team_members')
     .select(`
       user_id,

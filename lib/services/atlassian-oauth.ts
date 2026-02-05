@@ -1,16 +1,16 @@
-import { supabase, JiraIntegrationConfig } from '../supabase';
+import { getServiceSupabase, JiraIntegrationConfig } from '../supabase';
+import { encrypt, decrypt } from '../utils/encryption';
 
 const ATLASSIAN_AUTH_URL = 'https://auth.atlassian.com/authorize';
 const ATLASSIAN_TOKEN_URL = 'https://auth.atlassian.com/oauth/token';
 const ATLASSIAN_API_URL = 'https://api.atlassian.com';
 
-// Scopes for Jira access
+// Classic scopes for Jira access
+// read:jira-work covers issues, projects, boards, sprints (including agile API)
+// read:jira-user covers user profiles and avatars
 const JIRA_SCOPES = [
   'read:jira-work',
   'read:jira-user',
-  'read:sprint:jira-software',
-  'read:board:jira-software',
-  'read:project:jira',
   'offline_access', // For refresh tokens
 ];
 
@@ -57,7 +57,7 @@ export async function createOAuthState(teamId: string, userId: string): Promise<
   const stateToken = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
 
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('atlassian_oauth_states')
     .insert({
       team_id: teamId,
@@ -78,7 +78,7 @@ export async function createOAuthState(teamId: string, userId: string): Promise<
  * Verify and consume a state token, returning the associated teamId and userId
  */
 export async function verifyOAuthState(stateToken: string): Promise<{ teamId: string; userId: string } | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('atlassian_oauth_states')
     .select('team_id, user_id, expires_at')
     .eq('state_token', stateToken)
@@ -90,7 +90,7 @@ export async function verifyOAuthState(stateToken: string): Promise<{ teamId: st
   }
 
   // Delete the token (one-time use)
-  await supabase
+  await getServiceSupabase()
     .from('atlassian_oauth_states')
     .delete()
     .eq('state_token', stateToken);
@@ -256,7 +256,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<Atlassia
  * Get Jira integration config for a team
  */
 export async function getJiraIntegrationConfig(teamId: string): Promise<JiraIntegrationConfig | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('team_integrations')
     .select('config')
     .eq('team_id', teamId)
@@ -267,7 +267,21 @@ export async function getJiraIntegrationConfig(teamId: string): Promise<JiraInte
     return null;
   }
 
-  return data.config as JiraIntegrationConfig;
+  const config = data.config as JiraIntegrationConfig;
+
+  // Decrypt tokens if they are encrypted (contain ':' separator from AES-GCM format)
+  try {
+    if (config.access_token?.includes(':')) {
+      config.access_token = decrypt(config.access_token);
+    }
+    if (config.refresh_token?.includes(':')) {
+      config.refresh_token = decrypt(config.refresh_token);
+    }
+  } catch (err) {
+    console.error('[Atlassian] Error decrypting tokens, they may be in plaintext:', err);
+  }
+
+  return config;
 }
 
 /**
@@ -311,12 +325,19 @@ export async function saveJiraIntegration(
   config: Omit<JiraIntegrationConfig, 'project_key'> & { project_key?: string },
   connectedBy?: string
 ): Promise<void> {
-  const { error } = await supabase
+  // Encrypt tokens before storing
+  const encryptedConfig = {
+    ...config,
+    access_token: encrypt(config.access_token),
+    refresh_token: encrypt(config.refresh_token),
+  };
+
+  const { error } = await getServiceSupabase()
     .from('team_integrations')
     .upsert({
       team_id: teamId,
       provider: 'jira',
-      config,
+      config: encryptedConfig,
       connected_by: connectedBy || config.connected_email,
       connected_at: new Date().toISOString(),
     }, {
@@ -341,10 +362,25 @@ async function updateJiraTokens(
     throw new Error('Jira integration not found');
   }
 
-  const { error } = await supabase
+  // Encrypt tokens before storing
+  const encryptedTokens = {
+    access_token: encrypt(tokens.access_token),
+    refresh_token: encrypt(tokens.refresh_token),
+    token_expiry: tokens.token_expiry,
+  };
+
+  // Re-encrypt the existing tokens in config since getJiraIntegrationConfig decrypted them
+  const encryptedConfig = {
+    ...config,
+    access_token: encryptedTokens.access_token,
+    refresh_token: encryptedTokens.refresh_token,
+    token_expiry: encryptedTokens.token_expiry,
+  };
+
+  const { error } = await getServiceSupabase()
     .from('team_integrations')
     .update({
-      config: { ...config, ...tokens },
+      config: encryptedConfig,
     })
     .eq('team_id', teamId)
     .eq('provider', 'jira');
@@ -364,10 +400,16 @@ export async function updateJiraProjectKey(teamId: string, projectKey: string): 
     throw new Error('Jira integration not found');
   }
 
-  const { error } = await supabase
+  // Re-encrypt tokens since getJiraIntegrationConfig decrypted them
+  const { error } = await getServiceSupabase()
     .from('team_integrations')
     .update({
-      config: { ...config, project_key: projectKey },
+      config: {
+        ...config,
+        access_token: encrypt(config.access_token),
+        refresh_token: encrypt(config.refresh_token),
+        project_key: projectKey,
+      },
     })
     .eq('team_id', teamId)
     .eq('provider', 'jira');
@@ -397,7 +439,7 @@ export async function revokeJiraIntegration(teamId: string): Promise<void> {
   }
 
   // Delete from team_integrations
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('team_integrations')
     .delete()
     .eq('team_id', teamId)
@@ -413,7 +455,7 @@ export async function revokeJiraIntegration(teamId: string): Promise<void> {
  * Get the team slug for a team ID
  */
 export async function getTeamSlug(teamId: string): Promise<string | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('teams')
     .select('slug')
     .eq('id', teamId)

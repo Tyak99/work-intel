@@ -1,4 +1,4 @@
-import { supabase, GoogleDriveGrantRow, DriveFolderRow } from '../supabase';
+import { getServiceSupabase, GoogleDriveGrantRow, DriveFolderRow } from '../supabase';
 
 const GOOGLE_OAUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -68,7 +68,7 @@ export async function createOAuthState(userId: string): Promise<string> {
   const stateToken = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
 
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('drive_oauth_states')
     .insert({
       user_id: userId,
@@ -88,7 +88,7 @@ export async function createOAuthState(userId: string): Promise<string> {
  * Verify and consume a state token, returning the associated userId
  */
 export async function verifyOAuthState(stateToken: string): Promise<string | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('drive_oauth_states')
     .select('user_id, expires_at')
     .eq('state_token', stateToken)
@@ -100,7 +100,7 @@ export async function verifyOAuthState(stateToken: string): Promise<string | nul
   }
 
   // Delete the token (one-time use)
-  await supabase
+  await getServiceSupabase()
     .from('drive_oauth_states')
     .delete()
     .eq('state_token', stateToken);
@@ -257,7 +257,7 @@ export async function getValidAccessToken(userId: string): Promise<string | null
  * Save grant to database
  */
 async function saveGrant(grant: GoogleDriveGrant): Promise<void> {
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('google_drive_grants')
     .upsert({
       user_id: grant.userId,
@@ -281,7 +281,7 @@ async function saveGrant(grant: GoogleDriveGrant): Promise<void> {
  * Get user's Drive grant from database
  */
 export async function getUserDriveGrant(userId: string): Promise<GoogleDriveGrant | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('google_drive_grants')
     .select('*')
     .eq('user_id', userId)
@@ -325,7 +325,7 @@ export async function revokeDriveGrant(userId: string): Promise<void> {
   }
 
   // Delete grant from database
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('google_drive_grants')
     .delete()
     .eq('user_id', userId);
@@ -336,7 +336,7 @@ export async function revokeDriveGrant(userId: string): Promise<void> {
   }
 
   // Also delete all watched folders
-  await supabase
+  await getServiceSupabase()
     .from('drive_folders')
     .delete()
     .eq('user_id', userId);
@@ -419,7 +419,7 @@ export async function listAvailableFolders(userId: string, parentId?: string): P
  * Get user's watched folders from database
  */
 export async function getWatchedFolders(userId: string): Promise<DriveFolder[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('drive_folders')
     .select('*')
     .eq('user_id', userId)
@@ -448,7 +448,7 @@ export async function addWatchedFolder(
   folderName: string,
   purpose?: string
 ): Promise<DriveFolder> {
-  const { data, error } = await supabase
+  const { data, error } = await getServiceSupabase()
     .from('drive_folders')
     .upsert({
       user_id: userId,
@@ -480,7 +480,7 @@ export async function addWatchedFolder(
  * Remove a watched folder
  */
 export async function removeWatchedFolder(userId: string, folderId: string): Promise<void> {
-  const { error } = await supabase
+  const { error } = await getServiceSupabase()
     .from('drive_folders')
     .delete()
     .eq('user_id', userId)

@@ -3,9 +3,21 @@
 import { useState, useEffect } from 'react';
 import { useTeamStore } from '@/lib/team-store';
 import { UserPlus, Trash2, Edit2, Check, X, Loader2, Mail, Clock, RotateCcw } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface MemberManagementProps {
   teamId: string;
+  teamName?: string;
   members: Array<{
     id: string;
     user_id: string;
@@ -37,7 +49,7 @@ function formatRelativeTime(dateStr: string): string {
   return date.toLocaleDateString();
 }
 
-export function MemberManagement({ teamId, members, isAdmin, currentUserId }: MemberManagementProps) {
+export function MemberManagement({ teamId, teamName, members, isAdmin, currentUserId }: MemberManagementProps) {
   const { sendInvite, resendInvite, revokeInvite, fetchInvites, invites, removeMember, updateMember } = useTeamStore();
   const [newEmail, setNewEmail] = useState('');
   const [newGithub, setNewGithub] = useState('');
@@ -134,14 +146,34 @@ export function MemberManagement({ teamId, members, isAdmin, currentUserId }: Me
                 </div>
               </div>
 
-              {/* Remove button */}
+              {/* Remove button with confirmation */}
               {isAdmin && member.users.id !== currentUserId && (
-                <button
-                  onClick={() => removeMember(teamId, member.id)}
-                  className="text-muted-foreground hover:text-destructive ml-3 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <button
+                      className="text-muted-foreground hover:text-destructive ml-3 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remove team member</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Remove {member.users.display_name || member.users.email} from {teamName || 'the team'}? They will lose access to all team reports.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => removeMember(teamId, member.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Remove
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           ))}

@@ -109,6 +109,7 @@ export default function TeamSettingsPage() {
           <h2 className="text-lg font-semibold text-foreground mb-4">Team Members</h2>
           <MemberManagement
             teamId={teamId}
+            teamName={team.name}
             members={members}
             isAdmin={isAdmin}
             currentUserId={user?.id || ''}

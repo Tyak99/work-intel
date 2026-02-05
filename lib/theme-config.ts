@@ -232,4 +232,4 @@ export type ThemeId = keyof typeof themes;
 export type ThemeLabelKey = keyof ThemeLabels;
 
 // Helper to get default theme
-export const DEFAULT_THEME_ID: ThemeId = 'future';
+export const DEFAULT_THEME_ID: ThemeId = 'original';

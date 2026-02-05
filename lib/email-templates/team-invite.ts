@@ -145,6 +145,11 @@ export function buildTeamInviteEmailHtml(context: InviteEmailContext): string {
         Sent by <a href="https://work-intel.vercel.app">Work Intel</a> —
         Engineering intelligence for your team
       </p>
+      <p style="margin-top: 8px; font-size: 12px; color: #aaa;">
+        If you did not expect this invitation, you can safely ignore this email.
+      </p>
+      <!-- TODO: Add physical mailing address for full CAN-SPAM compliance -->
+      <p style="margin-top: 4px; font-size: 11px; color: #bbb;">Work Intel</p>
     </div>
   </div>
 </body>
