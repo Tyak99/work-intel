@@ -151,7 +151,7 @@ export default function TeamDashboardPage() {
           />
         ) : report ? (
           <>
-            <SummaryBanner summary={report.teamSummary} />
+            <SummaryBanner summary={report.teamSummary} sprintHealth={report.sprintHealth} />
 
             {teamId && <WeeklyTrends teamId={teamId} />}
 

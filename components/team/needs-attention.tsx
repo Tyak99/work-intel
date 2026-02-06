@@ -28,7 +28,7 @@ export function NeedsAttention({ items }: NeedsAttentionProps) {
           <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
           <div>
             <p className="text-sm font-medium text-foreground">All clear!</p>
-            <p className="text-xs text-muted-foreground">No stuck or blocked PRs this week.</p>
+            <p className="text-xs text-muted-foreground">No stuck or blocked items this week.</p>
           </div>
         </div>
       </div>
@@ -45,8 +45,12 @@ export function NeedsAttention({ items }: NeedsAttentionProps) {
         {items.map((item, i) => (
           <div key={i} className="rounded-lg border border-border bg-card p-4 flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-500 font-medium">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  item.type === 'blocked_issue' || item.type === 'stale_issue'
+                    ? 'bg-indigo-500/10 text-indigo-500'
+                    : 'bg-yellow-500/10 text-yellow-500'
+                }`}>
                   {item.type.replace(/_/g, ' ')}
                 </span>
                 <span className="text-xs text-muted-foreground">{item.repo}</span>

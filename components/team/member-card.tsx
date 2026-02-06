@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { GitMerge, GitPullRequest, MessageSquare, GitCommit, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import { GitMerge, GitPullRequest, MessageSquare, GitCommit, CheckSquare, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 
 interface MemberCardProps {
   member: {
@@ -11,11 +11,15 @@ interface MemberCardProps {
     reviewActivity: number;
     commitCount: number;
     aiSummary: string;
+    jiraIssuesCompleted?: Array<{ key: string; summary: string; url: string; issueType: string }>;
+    jiraIssuesInProgress?: Array<{ key: string; summary: string; url: string; issueType: string; storyPoints?: number }>;
+    jiraSummary?: string;
   };
 }
 
 export function MemberCard({ member }: MemberCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const jiraCompleted = member.jiraIssuesCompleted?.length || 0;
 
   return (
     <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -43,6 +47,12 @@ export function MemberCard({ member }: MemberCardProps) {
               <GitCommit className="w-3 h-3 text-muted-foreground" />
               {member.commitCount} commits
             </span>
+            {jiraCompleted > 0 && (
+              <span className="flex items-center gap-1">
+                <CheckSquare className="w-3 h-3 text-indigo-500" />
+                {jiraCompleted} tickets
+              </span>
+            )}
           </div>
         </div>
         {expanded ? (
@@ -57,6 +67,10 @@ export function MemberCard({ member }: MemberCardProps) {
         <div className="px-4 pb-4 border-t border-border pt-3 space-y-3">
           {member.aiSummary && (
             <p className="text-sm text-muted-foreground italic">{member.aiSummary}</p>
+          )}
+
+          {member.jiraSummary && (
+            <p className="text-sm text-indigo-600 dark:text-indigo-400 italic">{member.jiraSummary}</p>
           )}
 
           {member.shipped.length > 0 && (
@@ -99,6 +113,54 @@ export function MemberCard({ member }: MemberCardProps) {
                     </a>
                     {pr.daysSinceUpdate > 2 && (
                       <span className="text-xs text-yellow-500 ml-2">{pr.daysSinceUpdate}d stale</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {member.jiraIssuesCompleted && member.jiraIssuesCompleted.length > 0 && (
+            <div>
+              <h4 className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">Jira - Completed</h4>
+              <ul className="space-y-1">
+                {member.jiraIssuesCompleted.map((issue, i) => (
+                  <li key={i} className="text-sm">
+                    <a
+                      href={issue.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-foreground hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      <span className="text-xs font-mono text-indigo-500">{issue.key}</span>
+                      {issue.summary}
+                      <span className="text-xs text-muted-foreground">({issue.issueType})</span>
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {member.jiraIssuesInProgress && member.jiraIssuesInProgress.length > 0 && (
+            <div>
+              <h4 className="text-xs font-medium text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-1">Jira - In Progress</h4>
+              <ul className="space-y-1">
+                {member.jiraIssuesInProgress.map((issue, i) => (
+                  <li key={i} className="text-sm flex items-center justify-between">
+                    <a
+                      href={issue.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-foreground hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      <span className="text-xs font-mono text-indigo-500">{issue.key}</span>
+                      {issue.summary}
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    </a>
+                    {issue.storyPoints && (
+                      <span className="text-xs text-muted-foreground ml-2">{issue.storyPoints} pts</span>
                     )}
                   </li>
                 ))}
