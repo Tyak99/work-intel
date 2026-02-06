@@ -41,6 +41,8 @@ export interface JiraSprintData {
 
 export interface TeamJiraData {
   sprintData: JiraSprintData | null;
+  /** Data for all configured projects (when multiple) */
+  allProjectsData: JiraSprintData[];
   memberAssignments: Array<{
     assignee: string;
     issues: JiraIssue[];
@@ -72,24 +74,34 @@ export async function fetchTeamJiraData(teamId: string): Promise<TeamJiraData | 
     return null;
   }
 
-  if (!config.project_key) {
-    console.error('[TeamJira] No project key configured for team:', teamId);
+  const projectKeys = config.project_keys || (config.project_key ? [config.project_key] : []);
+  if (projectKeys.length === 0) {
+    console.error('[TeamJira] No project keys configured for team:', teamId);
     return null;
   }
 
   try {
-    const sprintData = await fetchSprintData(
-      accessToken,
-      config.cloud_id,
-      config.project_key,
-      config.site_url
+    // Fetch data for all configured projects in parallel
+    const allProjectsData = await Promise.all(
+      projectKeys.map(key =>
+        fetchSprintData(accessToken, config.cloud_id, key, config.site_url)
+      )
     );
 
-    // Group issues by assignee
-    const memberAssignments = groupIssuesByAssignee(sprintData);
+    // Merge sprint issues and completed issues across all projects for member assignments
+    const mergedSprintData: JiraSprintData = {
+      ...allProjectsData[0],
+      sprintIssues: allProjectsData.flatMap(d => d.sprintIssues),
+      recentlyCompleted: allProjectsData.flatMap(d => d.recentlyCompleted),
+      blockedIssues: allProjectsData.flatMap(d => d.blockedIssues),
+    };
+
+    // Group issues by assignee across all projects
+    const memberAssignments = groupIssuesByAssignee(mergedSprintData);
 
     const result: TeamJiraData = {
-      sprintData,
+      sprintData: allProjectsData[0], // primary project for backward compat
+      allProjectsData,
       memberAssignments,
       fetchedAt: new Date().toISOString(),
     };
@@ -344,7 +356,7 @@ function groupIssuesByAssignee(sprintData: JiraSprintData): TeamJiraData['member
  */
 export async function isJiraConfigured(teamId: string): Promise<boolean> {
   const config = await getJiraIntegrationConfig(teamId);
-  return config !== null && config.project_key !== undefined;
+  return config !== null && (config.project_keys?.length > 0 || !!config.project_key);
 }
 
 /**

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTeamStore } from '@/lib/team-store';
-import { Check, X, Loader2, ExternalLink } from 'lucide-react';
+import { Check, X, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
 
 interface JiraConnectFormProps {
   teamId: string;
@@ -12,20 +12,28 @@ interface JiraConnectFormProps {
 
 export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraConnectFormProps) {
   const { disconnectJira, fetchJiraProjects, setJiraProject, jiraProjects, isLoadingJiraProjects } = useTeamStore();
-  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isSavingProject, setIsSavingProject] = useState(false);
+  const [isChangingProject, setIsChangingProject] = useState(false);
 
   const config = currentIntegration?.config;
   const isConnected = !!currentIntegration;
-  const hasProjectConfigured = !!config?.project_key;
+  const hasProjectConfigured = !!(config?.project_keys?.length || config?.project_key);
+  const configuredKeys: string[] = config?.project_keys || (config?.project_key ? [config.project_key] : []);
 
-  // Fetch projects when Jira is connected but no project is configured
+  const toggleProject = (key: string) => {
+    setSelectedProjects(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  // Fetch projects when Jira is connected but no project is configured, or when changing project
   useEffect(() => {
-    if (isConnected && !hasProjectConfigured && isAdmin) {
+    if (isConnected && (!hasProjectConfigured || isChangingProject) && isAdmin) {
       fetchJiraProjects(teamId);
     }
-  }, [isConnected, hasProjectConfigured, isAdmin, teamId]);
+  }, [isConnected, hasProjectConfigured, isChangingProject, isAdmin, teamId]);
 
   const handleConnect = () => {
     // Redirect to OAuth flow
@@ -40,14 +48,16 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
   };
 
   const handleSaveProject = async () => {
-    if (!selectedProject) return;
+    if (selectedProjects.length === 0) return;
     setIsSavingProject(true);
-    await setJiraProject(teamId, selectedProject);
+    await setJiraProject(teamId, selectedProjects);
     setIsSavingProject(false);
+    setIsChangingProject(false);
+    setSelectedProjects([]);
   };
 
   // Fully connected state
-  if (isConnected && hasProjectConfigured) {
+  if (isConnected && hasProjectConfigured && !isChangingProject) {
     return (
       <div className="rounded-lg border border-border bg-card p-4">
         <div className="flex items-center justify-between">
@@ -59,7 +69,7 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
                 <Check className="w-4 h-4 text-green-500" />
               </div>
               <p className="text-sm text-muted-foreground">
-                Project: {config?.project_key}
+                {configuredKeys.length > 1 ? 'Projects' : 'Project'}: {configuredKeys.join(', ')}
               </p>
               {config?.site_url && (
                 <a
@@ -75,19 +85,74 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
             </div>
           </div>
           {isAdmin && (
-            <button
-              onClick={handleDisconnect}
-              disabled={isDisconnecting}
-              className="text-sm text-destructive hover:text-destructive/80 transition-colors flex items-center gap-1 disabled:opacity-50"
-            >
-              {isDisconnecting ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <X className="w-4 h-4" />
-              )}
-              Disconnect
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { setIsChangingProject(true); setSelectedProjects(configuredKeys); }}
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Change Projects
+              </button>
+              <button
+                onClick={handleDisconnect}
+                disabled={isDisconnecting}
+                className="text-sm text-destructive hover:text-destructive/80 transition-colors flex items-center gap-1 disabled:opacity-50"
+              >
+                {isDisconnecting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <X className="w-4 h-4" />
+                )}
+                Disconnect
+              </button>
+            </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  // Changing project (already connected, switching to different projects)
+  if (isConnected && isChangingProject) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+        <div className="flex items-center gap-3">
+          <JiraIcon className="w-5 h-5" />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-foreground">Jira Connected</span>
+              <Check className="w-4 h-4 text-green-500" />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Current: {configuredKeys.join(', ')}
+            </p>
+          </div>
+        </div>
+        <ProjectCheckboxList
+          isLoading={isLoadingJiraProjects}
+          projects={jiraProjects}
+          selectedKeys={selectedProjects}
+          onToggle={toggleProject}
+        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSaveProject}
+            disabled={selectedProjects.length === 0 || isSavingProject}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSavingProject ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Check className="w-4 h-4" />
+            )}
+            Save
+          </button>
+          <button
+            onClick={() => { setIsChangingProject(false); setSelectedProjects([]); }}
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     );
@@ -114,38 +179,17 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
 
         {isAdmin ? (
           <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Select Jira Project
-              </label>
-              {isLoadingJiraProjects ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading projects...
-                </div>
-              ) : jiraProjects.length === 0 ? (
-                <div className="text-sm text-muted-foreground py-2">
-                  No projects found. Make sure you have access to at least one Jira project.
-                </div>
-              ) : (
-                <select
-                  value={selectedProject}
-                  onChange={(e) => setSelectedProject(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <option value="">Choose a project...</option>
-                  {jiraProjects.map((project) => (
-                    <option key={project.id} value={project.key}>
-                      {project.name} ({project.key})
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
+            <ProjectCheckboxList
+              isLoading={isLoadingJiraProjects}
+              projects={jiraProjects}
+              selectedKeys={selectedProjects}
+              onToggle={toggleProject}
+              emptyMessage="No projects found. Make sure you have access to at least one Jira project."
+            />
             <div className="flex items-center gap-2">
               <button
                 onClick={handleSaveProject}
-                disabled={!selectedProject || isSavingProject}
+                disabled={selectedProjects.length === 0 || isSavingProject}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSavingProject ? (
@@ -153,7 +197,7 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
                 ) : (
                   <Check className="w-4 h-4" />
                 )}
-                Save Project
+                Save Projects
               </button>
               <button
                 onClick={handleDisconnect}
@@ -166,7 +210,7 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Ask a team admin to select a Jira project.
+            Ask a team admin to select Jira projects.
           </p>
         )}
       </div>
@@ -198,6 +242,56 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
         <JiraIcon className="w-4 h-4" />
         Connect Jira
       </button>
+    </div>
+  );
+}
+
+function ProjectCheckboxList({
+  isLoading,
+  projects,
+  selectedKeys,
+  onToggle,
+  emptyMessage,
+}: {
+  isLoading: boolean;
+  projects: { id: string; key: string; name: string }[];
+  selectedKeys: string[];
+  onToggle: (key: string) => void;
+  emptyMessage?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-foreground mb-1">
+        Select Jira Projects
+      </label>
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Loading projects...
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="text-sm text-muted-foreground py-2">
+          {emptyMessage || 'No projects found.'}
+        </div>
+      ) : (
+        <div className="max-h-48 overflow-y-auto rounded-md border border-border bg-background p-1 space-y-0.5">
+          {projects.map((project) => (
+            <label
+              key={project.id}
+              className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm text-foreground"
+            >
+              <input
+                type="checkbox"
+                checked={selectedKeys.includes(project.key)}
+                onChange={() => onToggle(project.key)}
+                className="rounded border-border"
+              />
+              <span>{project.name}</span>
+              <span className="text-muted-foreground">({project.key})</span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

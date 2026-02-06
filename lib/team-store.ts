@@ -87,7 +87,7 @@ interface TeamStore {
   disconnectGitHub: (teamId: string) => Promise<void>;
   disconnectJira: (teamId: string) => Promise<void>;
   fetchJiraProjects: (teamId: string) => Promise<void>;
-  setJiraProject: (teamId: string, projectKey: string) => Promise<void>;
+  setJiraProject: (teamId: string, projectKeys: string[]) => Promise<void>;
   reset: () => void;
 }
 
@@ -409,32 +409,32 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
     }
   },
 
-  setJiraProject: async (teamId: string, projectKey: string) => {
+  setJiraProject: async (teamId: string, projectKeys: string[]) => {
     try {
       const response = await fetch(`/api/teams/${teamId}/jira/project`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ projectKey }),
+        body: JSON.stringify({ projectKeys }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to set Jira project');
+        throw new Error(data.error || 'Failed to set Jira projects');
       }
 
       // Update the integration config in state
       set(state => ({
         integrations: state.integrations.map(i =>
           i.provider === 'jira'
-            ? { ...i, config: { ...i.config, project_key: projectKey } }
+            ? { ...i, config: { ...i.config, project_key: projectKeys[0], project_keys: projectKeys } }
             : i
         ),
       }));
-      toast.success('Jira project configured!');
+      toast.success(projectKeys.length > 1 ? 'Jira projects configured!' : 'Jira project configured!');
     } catch (error: any) {
-      console.error('Error setting Jira project:', error);
-      toast.error(error.message || 'Failed to set Jira project');
+      console.error('Error setting Jira projects:', error);
+      toast.error(error.message || 'Failed to set Jira projects');
     }
   },
 

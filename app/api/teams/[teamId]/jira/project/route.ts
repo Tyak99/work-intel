@@ -25,11 +25,14 @@ export async function POST(
       );
     }
 
-    const { projectKey } = await req.json();
+    const body = await req.json();
+    // Support both single projectKey and array projectKeys
+    const projectKeys: string[] = body.projectKeys
+      || (body.projectKey ? [body.projectKey] : []);
 
-    if (!projectKey || typeof projectKey !== 'string') {
+    if (projectKeys.length === 0 || !projectKeys.every((k: any) => typeof k === 'string')) {
       return NextResponse.json(
-        { error: 'Missing or invalid projectKey' },
+        { error: 'Missing or invalid projectKeys' },
         { status: 400 }
       );
     }
@@ -43,10 +46,10 @@ export async function POST(
       );
     }
 
-    // Update the project key
-    await updateJiraProjectKey(teamId, projectKey);
+    // Update the project keys
+    await updateJiraProjectKey(teamId, projectKeys);
 
-    return NextResponse.json({ success: true, projectKey });
+    return NextResponse.json({ success: true, projectKeys });
   } catch (error) {
     console.error('[Jira Project] Error setting project:', error);
     return NextResponse.json(
@@ -80,7 +83,10 @@ export async function GET(
       return NextResponse.json({ projectKey: null });
     }
 
-    return NextResponse.json({ projectKey: config.project_key || null });
+    return NextResponse.json({
+      projectKey: config.project_key || null,
+      projectKeys: config.project_keys || (config.project_key ? [config.project_key] : []),
+    });
   } catch (error) {
     console.error('[Jira Project] Error getting project:', error);
     return NextResponse.json(

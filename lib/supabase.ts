@@ -212,4 +212,5 @@ export interface JiraIntegrationConfig {
   scopes: string[];
   connected_email: string;
   project_key?: string;
+  project_keys?: string[];
 }

@@ -392,13 +392,16 @@ async function updateJiraTokens(
 }
 
 /**
- * Update Jira project key in the integration config
+ * Update Jira project keys in the integration config.
+ * Accepts a single key or an array of keys.
  */
-export async function updateJiraProjectKey(teamId: string, projectKey: string): Promise<void> {
+export async function updateJiraProjectKey(teamId: string, projectKeys: string | string[]): Promise<void> {
   const config = await getJiraIntegrationConfig(teamId);
   if (!config) {
     throw new Error('Jira integration not found');
   }
+
+  const keys = Array.isArray(projectKeys) ? projectKeys : [projectKeys];
 
   // Re-encrypt tokens since getJiraIntegrationConfig decrypted them
   const { error } = await getServiceSupabase()
@@ -408,14 +411,15 @@ export async function updateJiraProjectKey(teamId: string, projectKey: string): 
         ...config,
         access_token: encrypt(config.access_token),
         refresh_token: encrypt(config.refresh_token),
-        project_key: projectKey,
+        project_key: keys[0], // backward compat
+        project_keys: keys,
       },
     })
     .eq('team_id', teamId)
     .eq('provider', 'jira');
 
   if (error) {
-    console.error('[Atlassian] Error updating project key:', error);
+    console.error('[Atlassian] Error updating project keys:', error);
     throw error;
   }
 }
