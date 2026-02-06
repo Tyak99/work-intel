@@ -30,10 +30,12 @@ export function GitHubConnectForm({ teamId, isAdmin, currentIntegration }: GitHu
     e.preventDefault();
     if (!token || !org) return;
     setIsConnecting(true);
-    await connectGitHub(teamId, token, org);
-    trackEvent('github.connected', { teamId, method: 'pat' });
+    const success = await connectGitHub(teamId, token, org);
     setIsConnecting(false);
-    setToken('');
+    if (success) {
+      trackEvent('github.connected', { teamId, method: 'pat' });
+      setToken('');
+    }
   };
 
   const handleOAuthConnect = () => {

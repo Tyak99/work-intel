@@ -66,12 +66,14 @@ export function OnboardingWizard({ teamId, teamName, teamSlug, onComplete }: Onb
     e.preventDefault();
     if (!token || !org) return;
     setIsConnecting(true);
-    await connectGitHub(teamId, token, org);
+    const success = await connectGitHub(teamId, token, org);
     setIsConnecting(false);
-    setGithubConnected(true);
-    setToken('');
-    // Auto-advance after short delay so user sees the success state
-    setTimeout(() => setCurrentStep(1), 600);
+    if (success) {
+      setGithubConnected(true);
+      setToken('');
+      // Auto-advance after short delay so user sees the success state
+      setTimeout(() => setCurrentStep(1), 600);
+    }
   };
 
   const handleOAuthConnect = () => {

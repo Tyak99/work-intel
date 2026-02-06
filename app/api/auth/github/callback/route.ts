@@ -53,6 +53,11 @@ export async function GET(req: NextRequest) {
 
     try {
       const installId = parseInt(installationId, 10);
+      if (isNaN(installId)) {
+        return NextResponse.redirect(
+          `${baseUrl}/?github_error=${encodeURIComponent('Invalid installation ID')}`
+        );
+      }
 
       // Get org info from the installation
       const info = await getInstallationInfo(installId);

@@ -83,7 +83,7 @@ interface TeamStore {
   addMember: (teamId: string, email: string, githubUsername?: string) => Promise<void>;
   removeMember: (teamId: string, memberId: string) => Promise<void>;
   updateMember: (teamId: string, memberId: string, updates: { github_username?: string; role?: string }) => Promise<void>;
-  connectGitHub: (teamId: string, token: string, org: string) => Promise<void>;
+  connectGitHub: (teamId: string, token: string, org: string) => Promise<boolean>;
   disconnectGitHub: (teamId: string) => Promise<void>;
   disconnectJira: (teamId: string) => Promise<void>;
   fetchJiraProjects: (teamId: string) => Promise<void>;
@@ -319,7 +319,7 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
     }
   },
 
-  connectGitHub: async (teamId: string, token: string, org: string) => {
+  connectGitHub: async (teamId: string, token: string, org: string): Promise<boolean> => {
     try {
       const response = await fetch(`/api/teams/${teamId}/integrations/github`, {
         method: 'POST',
@@ -341,9 +341,11 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
         ],
       }));
       toast.success('GitHub connected!');
+      return true;
     } catch (error: any) {
       console.error('Error connecting GitHub:', error);
       toast.error(error.message || 'Failed to connect GitHub');
+      return false;
     }
   },
 

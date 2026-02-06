@@ -57,38 +57,27 @@ export async function createOAuthState(
 export async function verifyOAuthState(
   stateToken: string
 ): Promise<{ teamId: string; userId: string; redirectTo: string | null } | null> {
+  // Atomic consume: DELETE + RETURNING in one step (prevents TOCTOU race)
   const { data, error } = await getServiceSupabase()
-    .from('github_oauth_states')
-    .select('team_id, user_id, redirect_to, expires_at')
-    .eq('state_token', stateToken)
-    .single();
+    .rpc('consume_github_oauth_state', { p_state_token: stateToken });
 
-  if (error || !data) {
+  if (error || !data || data.length === 0) {
     console.error('[GitHub OAuth] Invalid state token');
     return null;
   }
 
-  // Check expiry before consuming
-  if (new Date(data.expires_at) < new Date()) {
-    // Delete expired token
-    await getServiceSupabase()
-      .from('github_oauth_states')
-      .delete()
-      .eq('state_token', stateToken);
+  const row = data[0];
+
+  // Check expiry (token already consumed/deleted)
+  if (new Date(row.expires_at) < new Date()) {
     console.error('[GitHub OAuth] State token expired');
     return null;
   }
 
-  // Delete valid token (one-time use)
-  await getServiceSupabase()
-    .from('github_oauth_states')
-    .delete()
-    .eq('state_token', stateToken);
-
   return {
-    teamId: data.team_id,
-    userId: data.user_id,
-    redirectTo: data.redirect_to,
+    teamId: row.team_id,
+    userId: row.user_id,
+    redirectTo: row.redirect_to,
   };
 }
 
