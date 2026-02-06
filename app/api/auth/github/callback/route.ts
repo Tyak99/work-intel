@@ -97,13 +97,13 @@ export async function GET(req: NextRequest) {
     } catch (exchangeError: any) {
       console.error('[GitHub Callback] Installation token error:', exchangeError);
       return NextResponse.redirect(
-        `${baseUrl}/?github_error=${encodeURIComponent(`GitHub App setup failed: ${exchangeError.message || exchangeError}`)}`
+        `${baseUrl}/?github_error=${encodeURIComponent('GitHub App setup failed. Please try again or contact support.')}`
       );
     }
   } catch (error: any) {
     console.error('[GitHub Callback] Unexpected error:', error);
     return NextResponse.redirect(
-      `${baseUrl}/?github_error=${encodeURIComponent(`Callback error: ${error.message || error}`)}`
+      `${baseUrl}/?github_error=${encodeURIComponent('An unexpected error occurred. Please try again.')}`
     );
   }
 }

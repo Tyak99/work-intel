@@ -20,11 +20,6 @@ function getPrivateKey(): string {
   return Buffer.from(b64, 'base64').toString('utf8');
 }
 
-function getRedirectUri(): string {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3004';
-  return `${baseUrl}/api/auth/github/callback`;
-}
-
 // --- OAuth state management (CSRF protection) ---
 
 export async function createOAuthState(
@@ -32,6 +27,12 @@ export async function createOAuthState(
   userId: string,
   redirectTo?: 'onboarding' | 'settings'
 ): Promise<string> {
+  // Clean up expired state tokens (opportunistic)
+  await getServiceSupabase()
+    .from('github_oauth_states')
+    .delete()
+    .lt('expires_at', new Date().toISOString());
+
   const stateToken = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min expiry
 
@@ -67,17 +68,22 @@ export async function verifyOAuthState(
     return null;
   }
 
-  // Delete the token (one-time use)
+  // Check expiry before consuming
+  if (new Date(data.expires_at) < new Date()) {
+    // Delete expired token
+    await getServiceSupabase()
+      .from('github_oauth_states')
+      .delete()
+      .eq('state_token', stateToken);
+    console.error('[GitHub OAuth] State token expired');
+    return null;
+  }
+
+  // Delete valid token (one-time use)
   await getServiceSupabase()
     .from('github_oauth_states')
     .delete()
     .eq('state_token', stateToken);
-
-  // Check expiry
-  if (new Date(data.expires_at) < new Date()) {
-    console.error('[GitHub OAuth] State token expired');
-    return null;
-  }
 
   return {
     teamId: data.team_id,

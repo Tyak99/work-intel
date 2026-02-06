@@ -42,26 +42,7 @@ export function GitHubConnectForm({ teamId, isAdmin, currentIntegration }: GitHu
   };
 
   const handleDisconnect = async () => {
-    const config = currentIntegration?.config;
-    if (config?.auth_type === 'github_app') {
-      // Use the OAuth disconnect endpoint
-      try {
-        const res = await fetch('/api/auth/github/disconnect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ teamId }),
-        });
-        if (res.ok) {
-          // Refresh integrations in store
-          await disconnectGitHub(teamId);
-        }
-      } catch {
-        await disconnectGitHub(teamId);
-      }
-    } else {
-      await disconnectGitHub(teamId);
-    }
+    await disconnectGitHub(teamId);
   };
 
   // Connected state
