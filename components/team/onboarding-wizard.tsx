@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTeamStore } from '@/lib/team-store';
 import {
   Github,
@@ -9,6 +10,7 @@ import {
   Mail,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   BarChart3,
   Users,
   ArrowRight,
@@ -32,13 +34,20 @@ const STEPS = [
 
 export function OnboardingWizard({ teamId, teamName, teamSlug, onComplete }: OnboardingWizardProps) {
   const { connectGitHub, sendInvite, generateReport, isGeneratingReport } = useTeamStore();
-  const [currentStep, setCurrentStep] = useState(0);
+  const searchParams = useSearchParams();
+
+  // Detect if user was redirected back from GitHub OAuth
+  const githubConnectedParam = searchParams.get('github_connected') === 'true';
+
+  const [currentStep, setCurrentStep] = useState(githubConnectedParam ? 1 : 0);
 
   // GitHub step state
   const [token, setToken] = useState('');
   const [org, setOrg] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
-  const [githubConnected, setGithubConnected] = useState(false);
+  const [githubConnected, setGithubConnected] = useState(githubConnectedParam);
+  const [showPATForm, setShowPATForm] = useState(false);
+  const [githubAppEnabled, setGithubAppEnabled] = useState(false);
 
   // Invite step state
   const [inviteEmail, setInviteEmail] = useState('');
@@ -46,7 +55,14 @@ export function OnboardingWizard({ teamId, teamName, teamSlug, onComplete }: Onb
   const [isSending, setIsSending] = useState(false);
   const [sentInvites, setSentInvites] = useState<string[]>([]);
 
-  const handleConnectGitHub = async (e: React.FormEvent) => {
+  useEffect(() => {
+    fetch('/api/auth/github/config')
+      .then(r => r.json())
+      .then(data => setGithubAppEnabled(data.githubAppEnabled))
+      .catch(() => setGithubAppEnabled(false));
+  }, []);
+
+  const handleConnectGitHubPAT = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token || !org) return;
     setIsConnecting(true);
@@ -56,6 +72,10 @@ export function OnboardingWizard({ teamId, teamName, teamSlug, onComplete }: Onb
     setToken('');
     // Auto-advance after short delay so user sees the success state
     setTimeout(() => setCurrentStep(1), 600);
+  };
+
+  const handleOAuthConnect = () => {
+    window.location.href = `/api/auth/github/connect?teamId=${teamId}&redirectTo=onboarding`;
   };
 
   const handleSendInvite = async (e: React.FormEvent) => {
@@ -138,8 +158,86 @@ export function OnboardingWizard({ teamId, teamName, teamSlug, onComplete }: Onb
                   GitHub connected
                 </div>
               </div>
+            ) : githubAppEnabled ? (
+              /* GitHub App OAuth flow (primary) */
+              <div className="space-y-4">
+                <Button onClick={handleOAuthConnect} className="w-full">
+                  <Github className="w-4 h-4 mr-2" />
+                  Install GitHub App
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  One-click setup. Installs on your organization with read-only access.
+                </p>
+
+                {/* PAT fallback */}
+                <div className="border-t border-border pt-3">
+                  <button
+                    onClick={() => setShowPATForm(!showPATForm)}
+                    className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1"
+                  >
+                    <ChevronDown className={`w-3 h-3 transition-transform ${showPATForm ? 'rotate-180' : ''}`} />
+                    Or use a Personal Access Token
+                  </button>
+
+                  {showPATForm && (
+                    <form onSubmit={handleConnectGitHubPAT} className="mt-3 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          Organization Name
+                        </label>
+                        <input
+                          type="text"
+                          value={org}
+                          onChange={e => setOrg(e.target.value)}
+                          placeholder="e.g., my-org"
+                          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-1">
+                          Personal Access Token
+                        </label>
+                        <input
+                          type="password"
+                          value={token}
+                          onChange={e => setToken(e.target.value)}
+                          placeholder="ghp_..."
+                          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        />
+                        <div className="mt-2 space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            Required scopes: <code className="px-1 py-0.5 rounded bg-muted text-xs">repo</code> and <code className="px-1 py-0.5 rounded bg-muted text-xs">read:org</code>
+                          </p>
+                          <a
+                            href="https://github.com/settings/tokens/new?scopes=repo,read:org&description=Work+Intel+Team+Access"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          >
+                            Create a token on GitHub
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                      <Button
+                        type="submit"
+                        disabled={!token || !org || isConnecting}
+                        className="w-full"
+                      >
+                        {isConnecting ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Github className="w-4 h-4 mr-2" />
+                        )}
+                        {isConnecting ? 'Connecting...' : 'Connect with PAT'}
+                      </Button>
+                    </form>
+                  )}
+                </div>
+              </div>
             ) : (
-              <form onSubmit={handleConnectGitHub} className="space-y-4">
+              /* PAT-only flow (GitHub App not configured) */
+              <form onSubmit={handleConnectGitHubPAT} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1">
                     Organization Name

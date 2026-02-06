@@ -1,6 +1,7 @@
 import { Octokit } from '@octokit/rest';
-import { getServiceSupabase } from '../supabase';
+import { getServiceSupabase, GitHubOAuthConfig } from '../supabase';
 import { decrypt } from '../utils/encryption';
+import { getInstallationAccessToken } from './github-oauth';
 import { cache } from '../cache';
 
 export interface MemberGitHubData {
@@ -116,8 +117,22 @@ export async function fetchTeamGitHubData(teamId: string): Promise<TeamGitHubDat
     throw new Error('GitHub integration not configured for this team');
   }
 
-  const { org, encrypted_token } = integration.config as { org: string; encrypted_token: string };
-  const token = decrypt(encrypted_token);
+  const config = integration.config as Record<string, any>;
+  let token: string;
+  let org: string;
+
+  if (config.auth_type === 'github_app') {
+    // GitHub App: generate a fresh installation token
+    const appConfig = config as GitHubOAuthConfig;
+    const result = await getInstallationAccessToken(appConfig.installation_id);
+    token = result.token;
+    org = appConfig.org;
+  } else {
+    // Legacy PAT: decrypt stored token
+    org = config.org;
+    token = decrypt(config.encrypted_token);
+  }
+
   const octokit = new Octokit({ auth: token });
 
   // Get team members with github usernames

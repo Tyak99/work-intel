@@ -214,3 +214,27 @@ export interface JiraIntegrationConfig {
   project_key?: string;
   project_keys?: string[];
 }
+
+export interface GitHubOAuthConfig {
+  installation_id: number;
+  org: string;
+  org_id: number;
+  connected_email: string;
+  auth_type: 'github_app';
+}
+
+export interface GitHubPATConfig {
+  org: string;
+  encrypted_token: string;
+  auth_type?: undefined;
+}
+
+export interface GitHubOAuthStateRow {
+  id: string;
+  team_id: string;
+  user_id: string;
+  state_token: string;
+  redirect_to: string | null;
+  expires_at: string;
+  created_at: string;
+}
