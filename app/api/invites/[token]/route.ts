@@ -30,6 +30,7 @@ export async function GET(
         email,
         role,
         github_username,
+        expires_at,
         teams:team_id(name, slug)
       `)
       .eq('token', token)
@@ -38,6 +39,13 @@ export async function GET(
     if (error || !invite) {
       return NextResponse.redirect(
         `${baseUrl}/login?error=${encodeURIComponent('Invalid or expired invitation')}`
+      );
+    }
+
+    // Check if invite has expired
+    if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+      return NextResponse.redirect(
+        `${baseUrl}/login?error=${encodeURIComponent('This invitation has expired. Please ask your team admin to send a new one.')}`
       );
     }
 

@@ -56,10 +56,13 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
     }
 
-    // Update last_sent_at
+    // Update last_sent_at and reset expiry
     const { error: updateError } = await getServiceSupabase()
       .from('team_invites')
-      .update({ last_sent_at: new Date().toISOString() })
+      .update({
+        last_sent_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      })
       .eq('id', inviteId);
 
     if (updateError) {

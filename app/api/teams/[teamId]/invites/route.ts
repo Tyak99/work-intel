@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { z } from 'zod';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamAdmin, getTeamById } from '@/lib/services/team-auth';
 import { sendTeamInviteEmail } from '@/lib/services/email';
 import { getServiceSupabase } from '@/lib/supabase';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
+
+const createInviteSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  role: z.enum(['admin', 'member']).default('member'),
+  github_username: z.string().optional(),
+});
 
 // GET /api/teams/[teamId]/invites - List pending invites
 export async function GET(
@@ -33,6 +41,7 @@ export async function GET(
         github_username,
         created_at,
         last_sent_at,
+        expires_at,
         invited_by,
         users:invited_by(display_name, email)
       `)
@@ -68,10 +77,24 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const { email, role = 'member', github_username } = await req.json();
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    // Rate limit: 10 invites per hour per team
+    const rl = rateLimit(`invite:${teamId}`, 10, 60 * 60 * 1000);
+    if (!rl.success) {
+      return NextResponse.json(
+        { error: 'Too many invites. Please try again later.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) },
+        }
+      );
     }
+
+    const body = await req.json();
+    const parsed = createInviteSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+    const { email, role: validRole, github_username } = parsed.data;
 
     // Get team details for email
     const team = await getTeamById(teamId);
@@ -108,16 +131,16 @@ export async function POST(
       .single();
 
     const inviterName = user.displayName || user.email;
-    const validRole = role === 'admin' ? 'admin' : 'member';
 
     if (existingInvite) {
-      // Update existing invite
+      // Update existing invite (reset expiry on resend)
       const { data: updatedInvite, error: updateError } = await getServiceSupabase()
         .from('team_invites')
         .update({
           role: validRole,
           github_username: github_username || null,
           last_sent_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         })
         .eq('id', existingInvite.id)
         .select()
@@ -159,6 +182,7 @@ export async function POST(
         github_username: github_username || null,
         token,
         invited_by: user.id,
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       })
       .select()
       .single();

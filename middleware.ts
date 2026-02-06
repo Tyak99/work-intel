@@ -13,7 +13,7 @@ const PUBLIC_ROUTES = [
 ];
 
 // Page routes accessible without authentication (landing page, etc.)
-const PUBLIC_PAGES = ['/'];
+const PUBLIC_PAGES = ['/', '/privacy', '/terms'];
 
 // API routes that require authentication
 const PROTECTED_API_PREFIXES = [

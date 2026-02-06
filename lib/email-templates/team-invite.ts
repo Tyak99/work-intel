@@ -135,7 +135,7 @@ export function buildTeamInviteEmailHtml(context: InviteEmailContext): string {
       </div>
 
       <div class="note">
-        <strong>Note:</strong> This invitation doesn't expire. If you don't have a Work Intel account yet,
+        <strong>Note:</strong> This invitation expires in 7 days. If you don't have a Work Intel account yet,
         clicking the button above will guide you through the sign-up process and automatically add you to the team.
       </div>
     </div>
@@ -148,7 +148,10 @@ export function buildTeamInviteEmailHtml(context: InviteEmailContext): string {
       <p style="margin-top: 8px; font-size: 12px; color: #aaa;">
         If you did not expect this invitation, you can safely ignore this email.
       </p>
-      <!-- TODO: Add physical mailing address for full CAN-SPAM compliance -->
+      <p style="margin-top: 8px; font-size: 11px; color: #bbb;">
+        <a href="https://work-intel.vercel.app/privacy" style="color: #bbb; text-decoration: underline;">Privacy Policy</a> &middot;
+        <a href="https://work-intel.vercel.app/terms" style="color: #bbb; text-decoration: underline;">Terms of Service</a>
+      </p>
       <p style="margin-top: 4px; font-size: 11px; color: #bbb;">Work Intel</p>
     </div>
   </div>

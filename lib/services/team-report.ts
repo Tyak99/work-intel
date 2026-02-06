@@ -54,6 +54,11 @@ export async function generateWeeklyReport(teamId: string): Promise<WeeklyReport
   // 4. Merge AI output with raw metrics
   const report = buildReport(githubData, aiResult);
 
+  // 4b. Propagate rate limit info if present
+  if (githubData.rateLimitInfo) {
+    report.rateLimitInfo = githubData.rateLimitInfo;
+  }
+
   // 5. Save to database
   await saveWeeklyReport(teamId, report);
 

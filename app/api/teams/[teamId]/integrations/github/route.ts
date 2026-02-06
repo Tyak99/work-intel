@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamAdmin } from '@/lib/services/team-auth';
 import { getServiceSupabase } from '@/lib/supabase';
@@ -6,6 +7,12 @@ import { encrypt } from '@/lib/utils/encryption';
 import { Octokit } from '@octokit/rest';
 
 export const dynamic = 'force-dynamic';
+
+const connectGitHubSchema = z.object({
+  org: z.string().min(1, 'Organization is required').max(100),
+  token: z.string().min(10, 'Token must be at least 10 characters'),
+  repos_filter: z.array(z.string()).optional(),
+});
 
 // POST /api/teams/[teamId]/integrations/github - Connect GitHub
 export async function POST(
@@ -24,10 +31,12 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const { token, org } = await req.json();
-    if (!token || !org) {
-      return NextResponse.json({ error: 'GitHub token and organization are required' }, { status: 400 });
+    const body = await req.json();
+    const parsed = connectGitHubSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
+    const { token, org } = parsed.data;
 
     // Test the token
     try {

@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, ExternalLink } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ExternalLink } from 'lucide-react';
 
 interface NeedsAttentionItem {
   type: string;
@@ -17,6 +17,24 @@ interface NeedsAttentionProps {
 }
 
 export function NeedsAttention({ items }: NeedsAttentionProps) {
+  if (items.length === 0) {
+    return (
+      <div>
+        <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+          <CheckCircle className="w-5 h-5 text-green-500" />
+          Needs Attention
+        </h2>
+        <div className="rounded-lg border border-border bg-card p-4 flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-foreground">All clear!</p>
+            <p className="text-xs text-muted-foreground">No stuck or blocked PRs this week.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h2 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">

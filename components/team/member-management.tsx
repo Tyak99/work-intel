@@ -96,22 +96,22 @@ export function MemberManagement({ teamId, teamName, members, isAdmin, currentUs
       <div className="rounded-lg border border-border bg-card overflow-hidden">
         <div className="divide-y divide-border">
           {members.map(member => (
-            <div key={member.id} className="px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
+            <div key={member.id} className="px-4 py-3 flex items-center justify-between gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground truncate">
                       {member.users.display_name || member.users.email}
                     </span>
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground flex-shrink-0">
                       {member.role}
                     </span>
                   </div>
-                  <div className="text-xs text-muted-foreground">{member.users.email}</div>
+                  <div className="text-xs text-muted-foreground truncate">{member.users.email}</div>
                 </div>
 
                 {/* GitHub username */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   {editingId === member.id ? (
                     <div className="flex items-center gap-1">
                       <input
@@ -190,7 +190,7 @@ export function MemberManagement({ teamId, teamName, members, isAdmin, currentUs
           <div className="rounded-lg border border-dashed border-border bg-muted/30 overflow-hidden">
             <div className="divide-y divide-border">
               {invites.map(invite => (
-                <div key={invite.id} className="px-4 py-3 flex items-center justify-between">
+                <div key={invite.id} className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-foreground truncate">{invite.email}</span>
@@ -199,14 +199,19 @@ export function MemberManagement({ teamId, teamName, members, isAdmin, currentUs
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                      <Clock className="w-3 h-3" />
+                      <Clock className="w-3 h-3 flex-shrink-0" />
                       <span>Sent {formatRelativeTime(invite.last_sent_at)}</span>
+                      {invite.expires_at && new Date(invite.expires_at) < new Date() ? (
+                        <span className="text-destructive font-medium">Expired</span>
+                      ) : invite.expires_at ? (
+                        <span>Expires {new Date(invite.expires_at).toLocaleDateString()}</span>
+                      ) : null}
                       {invite.github_username && (
                         <span className="ml-2">@{invite.github_username}</span>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 ml-3">
+                  <div className="flex items-center gap-2 sm:ml-3">
                     <button
                       onClick={() => handleResend(invite.id)}
                       disabled={resendingId === invite.id}
@@ -236,7 +241,7 @@ export function MemberManagement({ teamId, teamName, members, isAdmin, currentUs
 
       {/* Send invite form */}
       {isAdmin && (
-        <form onSubmit={handleSendInvite} className="flex items-end gap-2">
+        <form onSubmit={handleSendInvite} className="flex flex-col sm:flex-row sm:items-end gap-2">
           <div className="flex-1">
             <label className="block text-xs font-medium text-muted-foreground mb-1">Email</label>
             <input
@@ -247,7 +252,7 @@ export function MemberManagement({ teamId, teamName, members, isAdmin, currentUs
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
-          <div className="w-40">
+          <div className="sm:w-40">
             <label className="block text-xs font-medium text-muted-foreground mb-1">GitHub (optional)</label>
             <input
               type="text"
@@ -260,7 +265,7 @@ export function MemberManagement({ teamId, teamName, members, isAdmin, currentUs
           <button
             type="submit"
             disabled={!newEmail || isAdding}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
             Send Invite

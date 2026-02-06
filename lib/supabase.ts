@@ -188,6 +188,10 @@ export interface WeeklyReportData {
     commitCount: number;
     aiSummary: string;
   }>;
+  rateLimitInfo?: {
+    isPartial: boolean;
+    message: string;
+  };
 }
 
 export interface AtlassianOAuthStateRow {

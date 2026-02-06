@@ -529,6 +529,14 @@ function Footer() {
               Work Intel
             </span>
           </div>
+          <div className="flex items-center gap-4 text-sm text-slate-400">
+            <Link href="/privacy" className="hover:text-slate-600 transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-slate-600 transition-colors">
+              Terms of Service
+            </Link>
+          </div>
           <p className="text-sm text-slate-400">
             &copy; {new Date().getFullYear()} Work Intel. All rights reserved.
           </p>

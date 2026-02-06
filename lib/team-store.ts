@@ -25,6 +25,7 @@ interface TeamInvite {
   github_username: string | null;
   created_at: string;
   last_sent_at: string;
+  expires_at: string | null;
   invited_by: string;
   users?: {
     display_name: string | null;

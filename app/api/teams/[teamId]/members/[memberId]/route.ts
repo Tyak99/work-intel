@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamAdmin } from '@/lib/services/team-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
+
+const updateMemberSchema = z.object({
+  role: z.enum(['admin', 'member']).optional(),
+  github_username: z.string().optional(),
+});
 
 // DELETE /api/teams/[teamId]/members/[memberId]
 export async function DELETE(
@@ -76,13 +82,17 @@ export async function PATCH(
     }
 
     const body = await req.json();
-    const updates: Record<string, any> = {};
-
-    if (body.github_username !== undefined) {
-      updates.github_username = body.github_username || null;
+    const parsed = updateMemberSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
-    if (body.role && (body.role === 'admin' || body.role === 'member')) {
-      updates.role = body.role;
+
+    const updates: Record<string, any> = {};
+    if (parsed.data.github_username !== undefined) {
+      updates.github_username = parsed.data.github_username || null;
+    }
+    if (parsed.data.role !== undefined) {
+      updates.role = parsed.data.role;
     }
 
     if (Object.keys(updates).length === 0) {

@@ -10,6 +10,7 @@ import { JiraConnectForm } from '@/components/team/jira-connect-form';
 import { MemberManagement } from '@/components/team/member-management';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeamSettingsPage() {
   const params = useParams();
@@ -56,8 +57,42 @@ export default function TeamSettingsPage() {
 
   if (isLoading || !team || !teamId) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
+      <div className="min-h-screen bg-background">
+        <div className="border-b border-border bg-card/50">
+          <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
+            <Skeleton className="h-5 w-5 rounded" />
+            <Skeleton className="h-6 w-48" />
+          </div>
+        </div>
+        <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
+          {/* GitHub section skeleton */}
+          <section>
+            <Skeleton className="h-5 w-40 mb-4" />
+            <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-9 w-full rounded-md" />
+              <Skeleton className="h-9 w-full rounded-md" />
+              <Skeleton className="h-9 w-36 rounded-md" />
+            </div>
+          </section>
+          {/* Members section skeleton */}
+          <section>
+            <Skeleton className="h-5 w-32 mb-4" />
+            <div className="rounded-lg border border-border bg-card overflow-hidden divide-y divide-border">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="px-4 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <Skeleton className="h-4 w-32 mb-1" />
+                      <Skeleton className="h-3 w-44" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-4 w-20" />
+                </div>
+              ))}
+            </div>
+          </section>
+        </main>
       </div>
     );
   }

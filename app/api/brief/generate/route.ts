@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateDailyBriefService } from '@/lib/services/brief';
 import { getCurrentUserId } from '@/lib/services/auth';
+import { rateLimit } from '@/lib/rate-limit';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,6 +40,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
+        );
+      }
+
+      // Rate limit: 5 brief generations per day per user (non-cron only)
+      const rl = rateLimit(`brief-generate:${userId}`, 5, 24 * 60 * 60 * 1000);
+      if (!rl.success) {
+        return NextResponse.json(
+          { error: 'Brief generation limit reached. Please try again later.' },
+          {
+            status: 429,
+            headers: { 'Retry-After': String(Math.ceil(rl.retryAfterMs / 1000)) },
+          }
         );
       }
     }

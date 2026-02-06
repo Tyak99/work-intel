@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { getCurrentUser } from '@/lib/services/auth';
 import { getServiceSupabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
+
+const createTeamSchema = z.object({
+  name: z.string().min(2, 'Team name must be at least 2 characters').max(50, 'Team name must be at most 50 characters').trim(),
+});
 
 // POST /api/teams - Create a team
 export async function POST(req: NextRequest) {
@@ -10,10 +15,12 @@ export async function POST(req: NextRequest) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { name } = await req.json();
-    if (!name || typeof name !== 'string' || name.trim().length < 2) {
-      return NextResponse.json({ error: 'Team name must be at least 2 characters' }, { status: 400 });
+    const body = await req.json();
+    const parsed = createTeamSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
+    const { name } = parsed.data;
 
     const slug = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 

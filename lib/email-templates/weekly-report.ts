@@ -301,7 +301,10 @@ export function buildManagerEmailHtml(
       <p style="margin-top: 8px; font-size: 12px;">
         <a href="${escapeHtml(unsubscribeUrl)}" style="color: #888;">Unsubscribe from these emails</a>
       </p>
-      <!-- TODO: Add physical mailing address for full CAN-SPAM compliance -->
+      <p style="margin-top: 8px; font-size: 11px; color: #bbb;">
+        <a href="https://work-intel.vercel.app/privacy" style="color: #bbb; text-decoration: underline;">Privacy Policy</a> &middot;
+        <a href="https://work-intel.vercel.app/terms" style="color: #bbb; text-decoration: underline;">Terms of Service</a>
+      </p>
       <p style="margin-top: 4px; font-size: 11px; color: #bbb;">Work Intel</p>
     </div>
   </div>
@@ -433,7 +436,10 @@ export function buildDeveloperEmailHtml(
       <p style="margin-top: 8px; font-size: 12px;">
         <a href="${escapeHtml(unsubscribeUrl)}" style="color: #888;">Unsubscribe from these emails</a>
       </p>
-      <!-- TODO: Add physical mailing address for full CAN-SPAM compliance -->
+      <p style="margin-top: 8px; font-size: 11px; color: #bbb;">
+        <a href="https://work-intel.vercel.app/privacy" style="color: #bbb; text-decoration: underline;">Privacy Policy</a> &middot;
+        <a href="https://work-intel.vercel.app/terms" style="color: #bbb; text-decoration: underline;">Terms of Service</a>
+      </p>
       <p style="margin-top: 4px; font-size: 11px; color: #bbb;">Work Intel</p>
     </div>
   </div>

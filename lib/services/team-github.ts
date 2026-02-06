@@ -36,6 +36,67 @@ export interface TeamGitHubData {
     reason: string;
   }>;
   fetchedAt: string;
+  rateLimitInfo?: {
+    isPartial: boolean;
+    message: string;
+  };
+}
+
+interface GitHubRateLimitState {
+  remaining: number;
+  resetAt: number; // Unix timestamp in seconds
+  isLimited: boolean;
+}
+
+function checkRateLimitHeaders(headers: Record<string, string | undefined>): GitHubRateLimitState {
+  const remaining = parseInt(headers['x-ratelimit-remaining'] || '999', 10);
+  const resetAt = parseInt(headers['x-ratelimit-reset'] || '0', 10);
+  const isLimited = remaining === 0;
+
+  if (remaining < 10 && remaining > 0) {
+    console.warn(`GitHub API rate limit low: ${remaining} requests remaining. Resets at ${new Date(resetAt * 1000).toISOString()}`);
+  }
+
+  return { remaining, resetAt, isLimited };
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3
+): Promise<T> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      const status = error?.status || error?.response?.status;
+
+      if ((status === 403 || status === 429) && attempt < maxRetries) {
+        // Check for rate limit reset header
+        const resetAt = error?.response?.headers?.['x-ratelimit-reset'];
+        let waitMs: number;
+
+        if (resetAt) {
+          const resetTime = parseInt(resetAt, 10) * 1000;
+          waitMs = Math.min(resetTime - Date.now() + 1000, 60000); // Wait until reset, max 60s
+          if (waitMs < 0) waitMs = 1000;
+        } else {
+          // Exponential backoff: 1s, 2s, 4s
+          waitMs = Math.pow(2, attempt) * 1000;
+        }
+
+        console.warn(`GitHub API rate limited (attempt ${attempt + 1}/${maxRetries + 1}). Waiting ${Math.round(waitMs / 1000)}s...`);
+        await new Promise(resolve => setTimeout(resolve, waitMs));
+        continue;
+      }
+
+      throw error;
+    }
+  }
+
+  throw lastError;
 }
 
 export async function fetchTeamGitHubData(teamId: string): Promise<TeamGitHubData> {
@@ -81,12 +142,30 @@ export async function fetchTeamGitHubData(teamId: string): Promise<TeamGitHubDat
   // Fetch data per member with concurrency limit of 3
   const memberDataResults: MemberGitHubData[] = [];
   const chunks = chunkArray(githubUsernames, 3);
+  let wasRateLimited = false;
 
   for (const chunk of chunks) {
+    // Check rate limit before each chunk
+    try {
+      const { headers } = await octokit.rest.rateLimit.get();
+      const state = checkRateLimitHeaders(headers as Record<string, string | undefined>);
+      if (state.isLimited) {
+        console.warn(`GitHub API rate limit exhausted before fetching all members. Returning partial data.`);
+        wasRateLimited = true;
+        break;
+      }
+    } catch {
+      // Rate limit check itself failed; continue with data fetch
+    }
+
     const results = await Promise.all(
       chunk.map(username => fetchMemberData(octokit, username, org, weekAgoISO))
     );
-    memberDataResults.push(...results);
+
+    for (const r of results) {
+      if (r.wasRateLimited) wasRateLimited = true;
+      memberDataResults.push(r.data);
+    }
   }
 
   // Classify stuck PRs across all members
@@ -128,8 +207,20 @@ export async function fetchTeamGitHubData(teamId: string): Promise<TeamGitHubDat
     fetchedAt: new Date().toISOString(),
   };
 
+  if (wasRateLimited) {
+    result.rateLimitInfo = {
+      isPartial: true,
+      message: 'Some data may be missing due to GitHub API rate limits',
+    };
+  }
+
   cache.set(cacheKey, result, 15 * 60 * 1000);
   return result;
+}
+
+interface FetchMemberResult {
+  data: MemberGitHubData;
+  wasRateLimited: boolean;
 }
 
 async function fetchMemberData(
@@ -137,35 +228,52 @@ async function fetchMemberData(
   username: string,
   org: string,
   weekAgoISO: string
-): Promise<MemberGitHubData> {
+): Promise<FetchMemberResult> {
+  let wasRateLimited = false;
+
   try {
     const [mergedResult, openResult, reviewResult, commitResult] = await Promise.all([
       // Merged PRs in the past week
-      octokit.rest.search.issuesAndPullRequests({
-        q: `is:pr is:merged author:${username} org:${org} merged:>=${weekAgoISO}`,
-        sort: 'updated',
-        order: 'desc',
-        per_page: 50,
-      }),
+      withRetry(() =>
+        octokit.rest.search.issuesAndPullRequests({
+          q: `is:pr is:merged author:${username} org:${org} merged:>=${weekAgoISO}`,
+          sort: 'updated',
+          order: 'desc',
+          per_page: 50,
+        })
+      ),
       // Open PRs
-      octokit.rest.search.issuesAndPullRequests({
-        q: `is:pr is:open author:${username} org:${org}`,
-        sort: 'updated',
-        order: 'desc',
-        per_page: 20,
-      }),
+      withRetry(() =>
+        octokit.rest.search.issuesAndPullRequests({
+          q: `is:pr is:open author:${username} org:${org}`,
+          sort: 'updated',
+          order: 'desc',
+          per_page: 20,
+        })
+      ),
       // Reviews given
-      octokit.rest.search.issuesAndPullRequests({
-        q: `is:pr reviewed-by:${username} org:${org} updated:>=${weekAgoISO}`,
-        sort: 'updated',
-        per_page: 1,
-      }),
+      withRetry(() =>
+        octokit.rest.search.issuesAndPullRequests({
+          q: `is:pr reviewed-by:${username} org:${org} updated:>=${weekAgoISO}`,
+          sort: 'updated',
+          per_page: 1,
+        })
+      ),
       // Commits
-      octokit.rest.search.commits({
-        q: `author:${username} org:${org} committer-date:>=${weekAgoISO}`,
-        per_page: 1,
-      }),
+      withRetry(() =>
+        octokit.rest.search.commits({
+          q: `author:${username} org:${org} committer-date:>=${weekAgoISO}`,
+          per_page: 1,
+        })
+      ),
     ]);
+
+    // Check rate limit on the last response
+    const headers = commitResult.headers as Record<string, string | undefined>;
+    const state = checkRateLimitHeaders(headers);
+    if (state.remaining < 10) {
+      wasRateLimited = state.isLimited;
+    }
 
     const mergedPRs = mergedResult.data.items.map(pr => ({
       title: pr.title,
@@ -185,20 +293,30 @@ async function fetchMemberData(
     }));
 
     return {
-      githubUsername: username,
-      mergedPRs,
-      openPRs,
-      reviewsGiven: reviewResult.data.total_count,
-      commitCount: commitResult.data.total_count,
+      data: {
+        githubUsername: username,
+        mergedPRs,
+        openPRs,
+        reviewsGiven: reviewResult.data.total_count,
+        commitCount: commitResult.data.total_count,
+      },
+      wasRateLimited,
     };
-  } catch (error) {
+  } catch (error: any) {
+    const status = error?.status || error?.response?.status;
+    if (status === 403 || status === 429) {
+      wasRateLimited = true;
+    }
     console.error(`Error fetching GitHub data for ${username}:`, error);
     return {
-      githubUsername: username,
-      mergedPRs: [],
-      openPRs: [],
-      reviewsGiven: 0,
-      commitCount: 0,
+      data: {
+        githubUsername: username,
+        mergedPRs: [],
+        openPRs: [],
+        reviewsGiven: 0,
+        commitCount: 0,
+      },
+      wasRateLimited,
     };
   }
 }
