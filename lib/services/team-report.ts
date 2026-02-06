@@ -242,25 +242,21 @@ function buildReport(
       }),
     },
     sprintHealth: aiResult.sprintHealth,
-    needsAttention: aiResult.needsAttention.map(item => ({
-      ...item,
-      daysSinceUpdate:
-        item.type === 'blocked_issue' || item.type === 'stale_issue'
-          ? jiraData?.allProjectsData
-              .flatMap(p => [...p.blockedIssues, ...p.sprintIssues])
-              .find(i => i.url === item.url)
-              ? Math.floor(
-                  (Date.now() -
-                    new Date(
-                      jiraData!.allProjectsData
-                        .flatMap(p => [...p.blockedIssues, ...p.sprintIssues])
-                        .find(i => i.url === item.url)!.updated
-                    ).getTime()) /
-                    (1000 * 60 * 60 * 24)
-                )
-              : 0
-          : githubData.stuckPRs.find(p => p.url === item.url)?.daysSinceUpdate || 0,
-    })),
+    needsAttention: aiResult.needsAttention.map(item => {
+      if (item.type === 'blocked_issue' || item.type === 'stale_issue') {
+        const jiraIssue = jiraData?.allProjectsData
+          .flatMap(p => [...p.blockedIssues, ...p.sprintIssues])
+          .find(i => i.url === item.url);
+        const daysSinceUpdate = jiraIssue
+          ? Math.floor((Date.now() - new Date(jiraIssue.updated).getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+        return { ...item, daysSinceUpdate };
+      }
+      return {
+        ...item,
+        daysSinceUpdate: githubData.stuckPRs.find(p => p.url === item.url)?.daysSinceUpdate || 0,
+      };
+    }),
     memberSummaries: githubData.members.map(member => {
       const aiSummary = aiResult.memberSummaries.find(
         s => s.githubUsername === member.githubUsername
