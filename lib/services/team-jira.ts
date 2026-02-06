@@ -356,7 +356,7 @@ function groupIssuesByAssignee(sprintData: JiraSprintData): TeamJiraData['member
  */
 export async function isJiraConfigured(teamId: string): Promise<boolean> {
   const config = await getJiraIntegrationConfig(teamId);
-  return config !== null && (config.project_keys?.length > 0 || !!config.project_key);
+  return config !== null && ((config.project_keys?.length ?? 0) > 0 || !!config.project_key);
 }
 
 /**
