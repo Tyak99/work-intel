@@ -254,7 +254,7 @@ No rate limit detection in `team-github.ts`. A 10-person team makes 40 API calls
 
 *Setting up for the first 100 paying teams.*
 
-### 3.1 Replace GitHub PAT with GitHub OAuth App [In Progress]
+### 3.1 Replace GitHub PAT with GitHub OAuth App [Done]
 **Effort: Large | Impact: Very High (activation)**
 
 Manually creating a PAT is the highest-friction step in onboarding. A proper GitHub App OAuth flow is one-click. This is what every competitor uses.
