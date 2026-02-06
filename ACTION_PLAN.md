@@ -107,7 +107,7 @@ Currently unauthenticated users hit a redirect to `/login`. There's no public pa
 6. **Pricing table**: Free (5 members) / Team ($10/seat) / Business ($18/seat)
 7. **Final CTA**: "Start your free team recap in 2 minutes"
 
-### 1.5 Integrate Stripe Billing
+### 1.5 Integrate Stripe Billing [Deferred]
 **Effort: Large | Impact: Critical (revenue)**
 
 No path to revenue exists. Use Stripe Checkout for fastest implementation.
@@ -254,10 +254,12 @@ No rate limit detection in `team-github.ts`. A 10-person team makes 40 API calls
 
 *Setting up for the first 100 paying teams.*
 
-### 3.1 Replace GitHub PAT with GitHub OAuth App
+### 3.1 Replace GitHub PAT with GitHub OAuth App [In Progress]
 **Effort: Large | Impact: Very High (activation)**
 
 Manually creating a PAT is the highest-friction step in onboarding. A proper GitHub App OAuth flow is one-click. This is what every competitor uses.
+
+**Implementation plan**: See [`docs/GITHUB_OAUTH_IMPLEMENTATION_PLAN.md`](docs/GITHUB_OAUTH_IMPLEMENTATION_PLAN.md) for the full technical spec.
 
 **Expected outcome:**
 - Admin clicks "Connect GitHub" and gets redirected to GitHub's OAuth/App installation flow
