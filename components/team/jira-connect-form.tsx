@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTeamStore } from '@/lib/team-store';
-import { Check, X, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
+import { Check, X, Loader2, ExternalLink, RefreshCw, Users, ChevronDown } from 'lucide-react';
 
 interface JiraConnectFormProps {
   teamId: string;
@@ -11,16 +11,25 @@ interface JiraConnectFormProps {
 }
 
 export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraConnectFormProps) {
-  const { disconnectJira, fetchJiraProjects, setJiraProject, jiraProjects, isLoadingJiraProjects } = useTeamStore();
+  const {
+    disconnectJira, fetchJiraProjects, setJiraProject, jiraProjects, isLoadingJiraProjects,
+    fetchJiraMemberMatches, updateJiraMatch, confirmJiraMemberMatches,
+    jiraMemberMatches, jiraAvailableUsers, isLoadingJiraMatches, isConfirmingJiraMatches,
+    members,
+  } = useTeamStore();
   const [selectedProjects, setSelectedProjects] = useState<string[]>([]);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isSavingProject, setIsSavingProject] = useState(false);
   const [isChangingProject, setIsChangingProject] = useState(false);
+  const [showMemberMapping, setShowMemberMapping] = useState(false);
 
   const config = currentIntegration?.config;
   const isConnected = !!currentIntegration;
   const hasProjectConfigured = !!(config?.project_keys?.length || config?.project_key);
   const configuredKeys: string[] = config?.project_keys || (config?.project_key ? [config.project_key] : []);
+
+  // Check if any members have jira_account_id already mapped
+  const hasMemberMappings = members.some(m => m.jira_account_id);
 
   const toggleProject = (key: string) => {
     setSelectedProjects(prev =>
@@ -36,7 +45,6 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
   }, [isConnected, hasProjectConfigured, isChangingProject, isAdmin, teamId]);
 
   const handleConnect = () => {
-    // Redirect to OAuth flow
     window.location.href = `/api/auth/atlassian/connect?teamId=${teamId}`;
   };
 
@@ -54,60 +62,97 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
     setIsSavingProject(false);
     setIsChangingProject(false);
     setSelectedProjects([]);
+    // After saving projects, automatically show the member mapping step
+    if (isAdmin) {
+      setShowMemberMapping(true);
+      fetchJiraMemberMatches(teamId);
+    }
+  };
+
+  const handleShowMapping = () => {
+    setShowMemberMapping(true);
+    fetchJiraMemberMatches(teamId);
+  };
+
+  const handleConfirmMappings = async () => {
+    await confirmJiraMemberMatches(teamId);
+    setShowMemberMapping(false);
   };
 
   // Fully connected state
   if (isConnected && hasProjectConfigured && !isChangingProject) {
     return (
-      <div className="rounded-lg border border-border bg-card p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <JiraIcon className="w-5 h-5" />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-foreground">Jira Connected</span>
-                <Check className="w-4 h-4 text-green-500" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {configuredKeys.length > 1 ? 'Projects' : 'Project'}: {configuredKeys.join(', ')}
-              </p>
-              {config?.site_url && (
-                <a
-                  href={config.site_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                >
-                  {config.site_url.replace('https://', '')}
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
-            </div>
-          </div>
-          {isAdmin && (
+      <div className="space-y-3">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => { setIsChangingProject(true); setSelectedProjects(configuredKeys); }}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Change Projects
-              </button>
-              <button
-                onClick={handleDisconnect}
-                disabled={isDisconnecting}
-                className="text-sm text-destructive hover:text-destructive/80 transition-colors flex items-center gap-1 disabled:opacity-50"
-              >
-                {isDisconnecting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <X className="w-4 h-4" />
+              <JiraIcon className="w-5 h-5" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-foreground">Jira Connected</span>
+                  <Check className="w-4 h-4 text-green-500" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {configuredKeys.length > 1 ? 'Projects' : 'Project'}: {configuredKeys.join(', ')}
+                </p>
+                {config?.site_url && (
+                  <a
+                    href={config.site_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                  >
+                    {config.site_url.replace('https://', '')}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
                 )}
-                Disconnect
-              </button>
+              </div>
             </div>
-          )}
+            {isAdmin && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleShowMapping}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  {hasMemberMappings ? 'Remap Team' : 'Map Team'}
+                </button>
+                <button
+                  onClick={() => { setIsChangingProject(true); setSelectedProjects(configuredKeys); }}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Change Projects
+                </button>
+                <button
+                  onClick={handleDisconnect}
+                  disabled={isDisconnecting}
+                  className="text-sm text-destructive hover:text-destructive/80 transition-colors flex items-center gap-1 disabled:opacity-50"
+                >
+                  {isDisconnecting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <X className="w-4 h-4" />
+                  )}
+                  Disconnect
+                </button>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Member mapping step */}
+        {showMemberMapping && isAdmin && (
+          <JiraMemberMappingPanel
+            isLoading={isLoadingJiraMatches}
+            matches={jiraMemberMatches}
+            jiraUsers={jiraAvailableUsers}
+            isConfirming={isConfirmingJiraMatches}
+            onUpdateMatch={updateJiraMatch}
+            onConfirm={handleConfirmMappings}
+            onCancel={() => setShowMemberMapping(false)}
+          />
+        )}
       </div>
     );
   }
@@ -242,6 +287,216 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
         <JiraIcon className="w-4 h-4" />
         Connect Jira
       </button>
+    </div>
+  );
+}
+
+// --- Member Mapping Panel ---
+
+interface JiraUserOption {
+  accountId: string;
+  displayName: string;
+  emailAddress?: string;
+  avatarUrl?: string;
+  active: boolean;
+}
+
+interface MatchEntry {
+  memberId: string;
+  memberEmail: string;
+  memberDisplayName: string | null;
+  githubUsername: string | null;
+  suggestedJiraUser: JiraUserOption | null;
+  confidence: 'high' | 'medium' | 'low' | 'none';
+  matchReason: string;
+}
+
+function JiraMemberMappingPanel({
+  isLoading,
+  matches,
+  jiraUsers,
+  isConfirming,
+  onUpdateMatch,
+  onConfirm,
+  onCancel,
+}: {
+  isLoading: boolean;
+  matches: MatchEntry[];
+  jiraUsers: JiraUserOption[];
+  isConfirming: boolean;
+  onUpdateMatch: (memberId: string, jiraUser: JiraUserOption | null) => void;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          Matching team members to Jira users...
+        </div>
+      </div>
+    );
+  }
+
+  if (matches.length === 0) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-4">
+        <p className="text-sm text-muted-foreground">No team members to map.</p>
+        <button onClick={onCancel} className="text-sm text-muted-foreground hover:text-foreground mt-2">
+          Close
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-4 space-y-4">
+      <div>
+        <div className="flex items-center gap-2">
+          <Users className="w-4 h-4 text-foreground" />
+          <span className="font-medium text-foreground">Map Your Team</span>
+        </div>
+        <p className="text-sm text-muted-foreground mt-1">
+          Match each team member to their Jira account so reports show the right data.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {matches.map((match) => (
+          <MemberMatchRow
+            key={match.memberId}
+            match={match}
+            jiraUsers={jiraUsers}
+            onUpdate={(jiraUser) => onUpdateMatch(match.memberId, jiraUser)}
+          />
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2 pt-2">
+        <button
+          onClick={onConfirm}
+          disabled={isConfirming}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isConfirming ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Check className="w-4 h-4" />
+          )}
+          Confirm Mappings
+        </button>
+        <button
+          onClick={onCancel}
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MemberMatchRow({
+  match,
+  jiraUsers,
+  onUpdate,
+}: {
+  match: MatchEntry;
+  jiraUsers: JiraUserOption[];
+  onUpdate: (jiraUser: JiraUserOption | null) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const confidenceColor = {
+    high: 'text-green-600 dark:text-green-400',
+    medium: 'text-yellow-600 dark:text-yellow-400',
+    low: 'text-orange-600 dark:text-orange-400',
+    none: 'text-muted-foreground',
+  }[match.confidence];
+
+  const confidenceLabel = {
+    high: 'Email match',
+    medium: 'AI match',
+    low: 'Low confidence',
+    none: 'No match',
+  }[match.confidence];
+
+  return (
+    <div className="flex items-center gap-3 rounded-md border border-border bg-background px-3 py-2">
+      {/* Team member info */}
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-foreground truncate">
+          {match.memberDisplayName || match.memberEmail}
+        </div>
+        <div className="text-xs text-muted-foreground truncate">
+          {match.githubUsername && `@${match.githubUsername} · `}
+          {match.memberEmail}
+        </div>
+      </div>
+
+      {/* Arrow */}
+      <span className="text-muted-foreground text-xs flex-shrink-0">-&gt;</span>
+
+      {/* Jira user selection */}
+      <div ref={dropdownRef} className="relative flex-1 min-w-0">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-sm hover:bg-muted/50"
+        >
+          <span className="truncate text-foreground">
+            {match.suggestedJiraUser
+              ? match.suggestedJiraUser.displayName
+              : 'Select Jira user...'}
+          </span>
+          <ChevronDown className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+        </button>
+
+        {isOpen && (
+          <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto rounded-md border border-border bg-card shadow-lg">
+            <button
+              onClick={() => { onUpdate(null); setIsOpen(false); }}
+              className="w-full text-left px-3 py-1.5 text-sm text-muted-foreground hover:bg-muted/50"
+            >
+              No match
+            </button>
+            {jiraUsers.map((ju) => (
+              <button
+                key={ju.accountId}
+                onClick={() => { onUpdate(ju); setIsOpen(false); }}
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50 ${
+                  match.suggestedJiraUser?.accountId === ju.accountId
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-foreground'
+                }`}
+              >
+                <span>{ju.displayName}</span>
+                {ju.emailAddress && (
+                  <span className="text-xs text-muted-foreground ml-1">({ju.emailAddress})</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Confidence badge */}
+      <span className={`text-xs flex-shrink-0 ${confidenceColor}`}>
+        {confidenceLabel}
+      </span>
     </div>
   );
 }

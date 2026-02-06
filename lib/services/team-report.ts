@@ -57,14 +57,27 @@ Return ONLY valid JSON matching the required schema.`;
 }
 
 export async function generateWeeklyReport(teamId: string): Promise<WeeklyReportData> {
-  // 1. Fetch GitHub and Jira data in parallel
-  const [githubData, jiraData] = await Promise.all([
+  // 1. Fetch GitHub, Jira data, and team member mappings in parallel
+  const [githubData, jiraData, memberRows] = await Promise.all([
     fetchTeamGitHubData(teamId),
     fetchTeamJiraData(teamId).catch(err => {
       console.error('[TeamReport] Jira fetch failed, continuing without:', err);
       return null;
     }),
+    getServiceSupabase()
+      .from('team_members')
+      .select('user_id, github_username, jira_account_id')
+      .eq('team_id', teamId)
+      .then(({ data }) => data || []),
   ]);
+
+  // Build a lookup: github_username -> jira_account_id
+  const githubToJiraAccountId = new Map<string, string>();
+  for (const row of memberRows) {
+    if (row.github_username && row.jira_account_id) {
+      githubToJiraAccountId.set(row.github_username, row.jira_account_id);
+    }
+  }
 
   const hasJira = jiraData !== null;
 
@@ -75,7 +88,7 @@ export async function generateWeeklyReport(teamId: string): Promise<WeeklyReport
   const aiResult = await getAIAnalysis(context, hasJira);
 
   // 4. Merge AI output with raw metrics
-  const report = buildReport(githubData, jiraData, aiResult);
+  const report = buildReport(githubData, jiraData, aiResult, githubToJiraAccountId);
 
   // 4b. Propagate rate limit info if present
   if (githubData.rateLimitInfo) {
@@ -148,6 +161,7 @@ function buildTeamContext(data: TeamGitHubData, jiraData: TeamJiraData | null) {
       })),
       memberAssignments: jiraData.memberAssignments.map(ma => ({
         assignee: ma.assignee,
+        assigneeAccountId: ma.assigneeAccountId,
         completedThisWeek: ma.completedThisWeek,
         inProgress: ma.inProgress,
         issueKeys: ma.issues.slice(0, 5).map(i => `${i.key}: ${i.summary} (${i.status})`),
@@ -195,7 +209,8 @@ async function getAIAnalysis(context: any, hasJira: boolean) {
 function buildReport(
   githubData: TeamGitHubData,
   jiraData: TeamJiraData | null,
-  aiResult: z.infer<typeof TeamAISummarySchema>
+  aiResult: z.infer<typeof TeamAISummarySchema>,
+  githubToJiraAccountId: Map<string, string>
 ): WeeklyReportData {
   const totalPRsMerged = githubData.members.reduce((sum, m) => sum + m.mergedPRs.length, 0);
   const totalPRsOpen = githubData.members.reduce((sum, m) => sum + m.openPRs.length, 0);
@@ -211,7 +226,7 @@ function buildReport(
       )
     : undefined;
 
-  // Build per-member Jira lookup
+  // Build per-member Jira lookup keyed by assigneeAccountId for reliable matching
   const jiraMemberMap = new Map<string, {
     completed: TeamJiraData['allProjectsData'][0]['recentlyCompleted'];
     inProgress: TeamJiraData['allProjectsData'][0]['sprintIssues'];
@@ -219,11 +234,12 @@ function buildReport(
 
   if (jiraData) {
     for (const ma of jiraData.memberAssignments) {
+      const key = ma.assigneeAccountId || ma.assignee;
       const completedForMember = jiraData.allProjectsData
         .flatMap(p => p.recentlyCompleted)
-        .filter(i => i.assignee === ma.assignee);
+        .filter(i => (ma.assigneeAccountId ? i.assigneeAccountId === ma.assigneeAccountId : i.assignee === ma.assignee));
       const inProgressForMember = ma.issues.filter(i => i.statusCategory === 'indeterminate');
-      jiraMemberMap.set(ma.assignee, { completed: completedForMember, inProgress: inProgressForMember });
+      jiraMemberMap.set(key, { completed: completedForMember, inProgress: inProgressForMember });
     }
   }
 
@@ -262,9 +278,9 @@ function buildReport(
         s => s.githubUsername === member.githubUsername
       );
 
-      // Try to find Jira data for this member by matching GitHub username to Jira display name
-      // This is a best-effort match — Jira uses display names while we have GitHub usernames
-      const memberJiraData = jiraMemberMap.get(member.githubUsername);
+      // Look up Jira data using the stored jira_account_id mapping
+      const jiraAccountId = githubToJiraAccountId.get(member.githubUsername);
+      const memberJiraData = jiraAccountId ? jiraMemberMap.get(jiraAccountId) : undefined;
 
       return {
         githubUsername: member.githubUsername,

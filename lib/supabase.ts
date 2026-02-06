@@ -129,6 +129,7 @@ export interface TeamMemberRow {
   user_id: string;
   role: 'admin' | 'member';
   github_username: string | null;
+  jira_account_id: string | null;
   joined_at: string;
 }
 
