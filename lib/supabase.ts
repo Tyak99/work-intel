@@ -129,6 +129,7 @@ export interface TeamMemberRow {
   user_id: string;
   role: 'admin' | 'member';
   github_username: string | null;
+  jira_account_id: string | null;
   joined_at: string;
 }
 
@@ -170,9 +171,22 @@ export interface WeeklyReportData {
     summary: string;
     velocity: string;
     keyHighlights: string[];
+    // Jira fields (optional — only present when Jira is connected)
+    jiraHighlights?: string[];
+    totalJiraIssuesCompleted?: number;
+    totalJiraIssuesInProgress?: number;
+  };
+  sprintHealth?: {
+    sprintName: string;
+    progress: string;
+    completionRate: string;
+    pointsCompleted: number | null;
+    pointsRemaining: number | null;
+    daysRemaining: number | null;
+    insight: string;
   };
   needsAttention: Array<{
-    type: 'stuck_pr' | 'blocked_pr' | 'unreviewed_pr';
+    type: 'stuck_pr' | 'blocked_pr' | 'unreviewed_pr' | 'blocked_issue' | 'stale_issue';
     title: string;
     url: string;
     repo: string;
@@ -187,11 +201,16 @@ export interface WeeklyReportData {
     reviewActivity: number;
     commitCount: number;
     aiSummary: string;
+    // Jira fields (optional)
+    jiraIssuesCompleted?: Array<{ key: string; summary: string; url: string; issueType: string }>;
+    jiraIssuesInProgress?: Array<{ key: string; summary: string; url: string; issueType: string; storyPoints?: number }>;
+    jiraSummary?: string;
   }>;
   rateLimitInfo?: {
     isPartial: boolean;
     message: string;
   };
+  hasJiraData?: boolean;
 }
 
 export interface AtlassianOAuthStateRow {

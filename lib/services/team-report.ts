@@ -2,13 +2,24 @@ import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
 import { getServiceSupabase, WeeklyReportData } from '../supabase';
 import { fetchTeamGitHubData, TeamGitHubData } from './team-github';
+import { fetchTeamJiraData, TeamJiraData } from './team-jira';
 
 const TeamAISummarySchema = z.object({
   summary: z.string(),
   velocity: z.string(),
   keyHighlights: z.array(z.string()).max(5),
+  jiraHighlights: z.array(z.string()).max(3).optional(),
+  sprintHealth: z.object({
+    sprintName: z.string(),
+    progress: z.enum(['On track', 'At risk', 'Behind']),
+    completionRate: z.string(),
+    pointsCompleted: z.number().nullable(),
+    pointsRemaining: z.number().nullable(),
+    daysRemaining: z.number().nullable(),
+    insight: z.string(),
+  }).optional(),
   needsAttention: z.array(z.object({
-    type: z.enum(['stuck_pr', 'blocked_pr', 'unreviewed_pr']),
+    type: z.enum(['stuck_pr', 'blocked_pr', 'unreviewed_pr', 'blocked_issue', 'stale_issue']),
     title: z.string(),
     url: z.string(),
     repo: z.string(),
@@ -18,41 +29,66 @@ const TeamAISummarySchema = z.object({
   memberSummaries: z.array(z.object({
     githubUsername: z.string(),
     aiSummary: z.string(),
+    jiraSummary: z.string().optional(),
   })),
 });
 
-const TEAM_REPORT_SYSTEM_PROMPT = `You are an engineering manager's assistant. Analyze the team's weekly GitHub activity and produce a concise summary.
+function buildSystemPrompt(hasJira: boolean): string {
+  const jiraGuidelines = hasJira ? `
+6. JIRA ANALYSIS: When Jira data is present, analyze sprint health and cross-reference with GitHub:
+   - sprintHealth: assess if the sprint is "On track", "At risk", or "Behind" based on completion rate and days remaining
+   - jiraHighlights: top 1-3 notable Jira deliverables (big tickets closed, sprint goals hit). If nothing notable, return empty array.
+   - For needsAttention: include "blocked_issue" for Jira issues flagged as blocked, "stale_issue" for in-progress issues with no recent updates (>5 days). Use the Jira issue URL for the url field and the project key for the repo field.
+   - For memberSummaries.jiraSummary: 1 sentence about their Jira work (tickets closed, what's in progress). Skip if member has no Jira activity.
+   - CROSS-REFERENCE: If you notice PRs merged but corresponding Jira tickets not moved, or Jira tickets done with no PRs, mention it in the summary.` : '';
+
+  return `You are an engineering manager's assistant. Analyze the team's weekly activity and produce a concise summary.
 
 GUIDELINES:
 1. Summarize what the team shipped, what's in flight, and what needs attention
 2. For velocity, describe trend qualitatively (e.g., "Strong week", "Moderate output", "Slow week - potential blockers")
 3. Key highlights: top 3-5 notable items (big features merged, important reviews, etc.). If no notable items, return an empty array.
-4. For needsAttention: only include PRs that are actually stuck. If none, return an empty array.
+4. For needsAttention: only include items that genuinely need attention. If none, return an empty array.
 5. CRITICAL - memberSummaries: You MUST include an entry for EVERY member in the input data. Each entry needs:
    - githubUsername: exact username string from the input
-   - aiSummary: 1-2 sentence summary (if no activity, say "No GitHub activity this week")
+   - aiSummary: 1-2 sentence summary (if no activity, say "No GitHub activity this week")${jiraGuidelines}
 
-Return ONLY valid JSON with this exact structure:
-{
-  "summary": "string - team overview",
-  "velocity": "string - qualitative assessment",
-  "keyHighlights": ["string array - can be empty"],
-  "needsAttention": [{"type": "stuck_pr|blocked_pr|unreviewed_pr", "title": "string", "url": "string", "repo": "string", "author": "string", "reason": "string"}],
-  "memberSummaries": [{"githubUsername": "exact username from input", "aiSummary": "string"}]
-}`;
+Return ONLY valid JSON matching the required schema.`;
+}
 
 export async function generateWeeklyReport(teamId: string): Promise<WeeklyReportData> {
-  // 1. Fetch GitHub data
-  const githubData = await fetchTeamGitHubData(teamId);
+  // 1. Fetch GitHub, Jira data, and team member mappings in parallel
+  const [githubData, jiraData, memberRows] = await Promise.all([
+    fetchTeamGitHubData(teamId),
+    fetchTeamJiraData(teamId).catch(err => {
+      console.error('[TeamReport] Jira fetch failed, continuing without:', err);
+      return null;
+    }),
+    getServiceSupabase()
+      .from('team_members')
+      .select('user_id, github_username, jira_account_id')
+      .eq('team_id', teamId)
+      .then(({ data }) => data || []),
+  ]);
+
+  // Build a lookup: github_username -> jira_account_id
+  const githubToJiraAccountId = new Map<string, string>();
+  for (const row of memberRows) {
+    if (row.github_username && row.jira_account_id) {
+      githubToJiraAccountId.set(row.github_username, row.jira_account_id);
+    }
+  }
+
+  const hasJira = jiraData !== null;
 
   // 2. Build condensed context for Claude
-  const context = buildTeamContext(githubData);
+  const context = buildTeamContext(githubData, jiraData);
 
   // 3. Get AI analysis
-  const aiResult = await getAIAnalysis(context);
+  const aiResult = await getAIAnalysis(context, hasJira);
 
   // 4. Merge AI output with raw metrics
-  const report = buildReport(githubData, aiResult);
+  const report = buildReport(githubData, jiraData, aiResult, githubToJiraAccountId);
 
   // 4b. Propagate rate limit info if present
   if (githubData.rateLimitInfo) {
@@ -65,8 +101,8 @@ export async function generateWeeklyReport(teamId: string): Promise<WeeklyReport
   return report;
 }
 
-function buildTeamContext(data: TeamGitHubData) {
-  return {
+function buildTeamContext(data: TeamGitHubData, jiraData: TeamJiraData | null) {
+  const context: Record<string, any> = {
     org: data.org,
     weekEnding: new Date().toISOString().split('T')[0],
     totalMembers: data.members.length,
@@ -88,23 +124,71 @@ function buildTeamContext(data: TeamGitHubData) {
       reason: pr.reason,
     })),
   };
+
+  // Add Jira context if available
+  if (jiraData) {
+    const primarySprint = jiraData.sprintData?.currentSprint;
+    const allCompleted = jiraData.allProjectsData.flatMap(p => p.recentlyCompleted);
+    const allBlocked = jiraData.allProjectsData.flatMap(p => p.blockedIssues);
+    const allSprintIssues = jiraData.allProjectsData.flatMap(p => p.sprintIssues);
+
+    context.jira = {
+      projects: jiraData.allProjectsData.map(p => p.projectKey),
+      sprint: primarySprint ? {
+        name: primarySprint.name,
+        goal: primarySprint.goal || null,
+        startDate: primarySprint.startDate || null,
+        endDate: primarySprint.endDate || null,
+        totalIssues: allSprintIssues.length,
+        doneIssues: allSprintIssues.filter(i => i.statusCategory === 'done').length,
+        inProgressIssues: allSprintIssues.filter(i => i.statusCategory === 'indeterminate').length,
+        totalPoints: allSprintIssues.reduce((sum, i) => sum + (i.storyPoints || 0), 0),
+        donePoints: allSprintIssues.filter(i => i.statusCategory === 'done').reduce((sum, i) => sum + (i.storyPoints || 0), 0),
+      } : null,
+      completedThisWeek: allCompleted.slice(0, 15).map(i => ({
+        key: i.key,
+        summary: i.summary,
+        assignee: i.assignee,
+        issueType: i.issueType,
+        storyPoints: i.storyPoints || null,
+      })),
+      blockedIssues: allBlocked.map(i => ({
+        key: i.key,
+        summary: i.summary,
+        assignee: i.assignee,
+        url: i.url,
+        daysSinceUpdate: Math.floor((Date.now() - new Date(i.updated).getTime()) / (1000 * 60 * 60 * 24)),
+      })),
+      memberAssignments: jiraData.memberAssignments.map(ma => ({
+        assignee: ma.assignee,
+        assigneeAccountId: ma.assigneeAccountId,
+        completedThisWeek: ma.completedThisWeek,
+        inProgress: ma.inProgress,
+        issueKeys: ma.issues.slice(0, 5).map(i => `${i.key}: ${i.summary} (${i.status})`),
+      })),
+    };
+  }
+
+  return context;
 }
 
-async function getAIAnalysis(context: any) {
+async function getAIAnalysis(context: any, hasJira: boolean) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not configured');
 
   const anthropic = new Anthropic({ apiKey });
 
+  const dataLabel = hasJira ? 'GitHub + Jira activity' : 'GitHub activity';
+
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 2000,
+    max_tokens: 2500,
     temperature: 0.2,
-    system: TEAM_REPORT_SYSTEM_PROMPT,
+    system: buildSystemPrompt(hasJira),
     messages: [
       {
         role: 'user',
-        content: `Analyze this team's weekly GitHub activity:\n\n${JSON.stringify(context, null, 2)}\n\nReturn ONLY valid JSON.`,
+        content: `Analyze this team's weekly ${dataLabel}:\n\n${JSON.stringify(context, null, 2)}\n\nReturn ONLY valid JSON.`,
       },
     ],
   });
@@ -124,12 +208,42 @@ async function getAIAnalysis(context: any) {
 
 function buildReport(
   githubData: TeamGitHubData,
-  aiResult: z.infer<typeof TeamAISummarySchema>
+  jiraData: TeamJiraData | null,
+  aiResult: z.infer<typeof TeamAISummarySchema>,
+  githubToJiraAccountId: Map<string, string>
 ): WeeklyReportData {
   const totalPRsMerged = githubData.members.reduce((sum, m) => sum + m.mergedPRs.length, 0);
   const totalPRsOpen = githubData.members.reduce((sum, m) => sum + m.openPRs.length, 0);
 
-  return {
+  // Compute Jira totals from raw data
+  const totalJiraCompleted = jiraData
+    ? jiraData.allProjectsData.reduce((sum, p) => sum + p.recentlyCompleted.length, 0)
+    : undefined;
+  const totalJiraInProgress = jiraData
+    ? jiraData.allProjectsData.reduce(
+        (sum, p) => sum + p.sprintIssues.filter(i => i.statusCategory === 'indeterminate').length,
+        0
+      )
+    : undefined;
+
+  // Build per-member Jira lookup keyed by assigneeAccountId for reliable matching
+  const jiraMemberMap = new Map<string, {
+    completed: TeamJiraData['allProjectsData'][0]['recentlyCompleted'];
+    inProgress: TeamJiraData['allProjectsData'][0]['sprintIssues'];
+  }>();
+
+  if (jiraData) {
+    for (const ma of jiraData.memberAssignments) {
+      const key = ma.assigneeAccountId || ma.assignee;
+      const completedForMember = jiraData.allProjectsData
+        .flatMap(p => p.recentlyCompleted)
+        .filter(i => (ma.assigneeAccountId ? i.assigneeAccountId === ma.assigneeAccountId : i.assignee === ma.assignee));
+      const inProgressForMember = ma.issues.filter(i => i.statusCategory === 'indeterminate');
+      jiraMemberMap.set(key, { completed: completedForMember, inProgress: inProgressForMember });
+    }
+  }
+
+  const report: WeeklyReportData = {
     teamSummary: {
       totalPRsMerged,
       totalPRsOpen,
@@ -137,15 +251,36 @@ function buildReport(
       summary: aiResult.summary,
       velocity: aiResult.velocity,
       keyHighlights: aiResult.keyHighlights,
+      ...(jiraData && {
+        jiraHighlights: aiResult.jiraHighlights || [],
+        totalJiraIssuesCompleted: totalJiraCompleted,
+        totalJiraIssuesInProgress: totalJiraInProgress,
+      }),
     },
-    needsAttention: aiResult.needsAttention.map(item => ({
-      ...item,
-      daysSinceUpdate: githubData.stuckPRs.find(p => p.url === item.url)?.daysSinceUpdate || 0,
-    })),
+    sprintHealth: aiResult.sprintHealth,
+    needsAttention: aiResult.needsAttention.map(item => {
+      if (item.type === 'blocked_issue' || item.type === 'stale_issue') {
+        const jiraIssue = jiraData?.allProjectsData
+          .flatMap(p => [...p.blockedIssues, ...p.sprintIssues])
+          .find(i => i.url === item.url);
+        const daysSinceUpdate = jiraIssue
+          ? Math.floor((Date.now() - new Date(jiraIssue.updated).getTime()) / (1000 * 60 * 60 * 24))
+          : 0;
+        return { ...item, daysSinceUpdate };
+      }
+      return {
+        ...item,
+        daysSinceUpdate: githubData.stuckPRs.find(p => p.url === item.url)?.daysSinceUpdate || 0,
+      };
+    }),
     memberSummaries: githubData.members.map(member => {
       const aiSummary = aiResult.memberSummaries.find(
         s => s.githubUsername === member.githubUsername
-      )?.aiSummary || '';
+      );
+
+      // Look up Jira data using the stored jira_account_id mapping
+      const jiraAccountId = githubToJiraAccountId.get(member.githubUsername);
+      const memberJiraData = jiraAccountId ? jiraMemberMap.get(jiraAccountId) : undefined;
 
       return {
         githubUsername: member.githubUsername,
@@ -164,10 +299,29 @@ function buildReport(
         })),
         reviewActivity: member.reviewsGiven,
         commitCount: member.commitCount,
-        aiSummary,
+        aiSummary: aiSummary?.aiSummary || '',
+        ...(jiraData && {
+          jiraSummary: aiSummary?.jiraSummary,
+          jiraIssuesCompleted: memberJiraData?.completed.map(i => ({
+            key: i.key,
+            summary: i.summary,
+            url: i.url,
+            issueType: i.issueType,
+          })),
+          jiraIssuesInProgress: memberJiraData?.inProgress.map(i => ({
+            key: i.key,
+            summary: i.summary,
+            url: i.url,
+            issueType: i.issueType,
+            storyPoints: i.storyPoints,
+          })),
+        }),
       };
     }),
+    hasJiraData: jiraData !== null,
   };
+
+  return report;
 }
 
 export async function saveWeeklyReport(teamId: string, report: WeeklyReportData): Promise<void> {

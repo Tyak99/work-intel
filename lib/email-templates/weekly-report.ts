@@ -211,9 +211,31 @@ export function buildManagerEmailHtml(
   report: WeeklyReportData,
   context: EmailContext
 ): string {
-  const { teamSummary, needsAttention, memberSummaries } = report;
+  const { teamSummary, sprintHealth, needsAttention, memberSummaries } = report;
   const { teamName, weekStartDate, dashboardUrl, teamSettingsUrl } = context;
   const unsubscribeUrl = teamSettingsUrl || dashboardUrl;
+
+  // Sprint health banner (only when Jira is connected and has active sprint)
+  const sprintHealthHtml = sprintHealth
+    ? `
+      <div style="background-color: #f0f4ff; border: 1px solid #c7d2fe; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 14px; font-weight: 600; color: #3730a3; margin: 0 0 8px;">
+          Sprint: ${escapeHtml(sprintHealth.sprintName)}
+        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="font-size: 13px; color: #4338ca;">
+              <strong>${escapeHtml(sprintHealth.progress)}</strong> &middot; ${escapeHtml(sprintHealth.completionRate)}
+              ${sprintHealth.daysRemaining !== null ? ` &middot; ${sprintHealth.daysRemaining}d remaining` : ''}
+            </td>
+          </tr>
+          <tr>
+            <td style="font-size: 13px; color: #555; padding-top: 4px;">${escapeHtml(sprintHealth.insight)}</td>
+          </tr>
+        </table>
+      </div>
+    `
+    : '';
 
   const needsAttentionHtml = needsAttention.length > 0
     ? `
@@ -221,6 +243,7 @@ export function buildManagerEmailHtml(
         <div class="alert-title">Needs Attention</div>
         ${needsAttention.map(item => `
           <div class="alert-item">
+            <span style="font-size: 11px; color: #856404; background: rgba(255,193,7,0.15); padding: 1px 6px; border-radius: 3px; margin-right: 4px;">${escapeHtml(item.type.replace(/_/g, ' '))}</span>
             <a href="${escapeHtml(item.url)}">${escapeHtml(item.title)}</a>
             <span class="alert-reason"> - ${escapeHtml(item.reason)}</span>
           </div>
@@ -229,18 +252,42 @@ export function buildManagerEmailHtml(
     `
     : '';
 
+  // Jira stats columns (only when data present)
+  const jiraStatsCols = report.hasJiraData
+    ? `
+          <td align="center" style="padding: 8px;">
+            <span style="font-size: 28px; font-weight: 700; display: block;">${teamSummary.totalJiraIssuesCompleted || 0}</span>
+            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #a0a0a0;">Issues Done</span>
+          </td>
+          <td align="center" style="padding: 8px;">
+            <span style="font-size: 28px; font-weight: 700; display: block;">${teamSummary.totalJiraIssuesInProgress || 0}</span>
+            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #a0a0a0;">In Progress</span>
+          </td>
+    `
+    : '';
+
   const memberCardsHtml = memberSummaries.map(member => {
     const prsMerged = member.shipped.length;
     const prsOpen = member.inFlight.length;
     const reviews = member.reviewActivity;
+    const jiraCompleted = member.jiraIssuesCompleted?.length || 0;
+
+    const jiraStats = report.hasJiraData && jiraCompleted > 0
+      ? `, ${jiraCompleted} tickets closed`
+      : '';
+
+    const jiraSummaryHtml = member.jiraSummary
+      ? `<div style="font-size: 13px; color: #4338ca; margin-top: 6px;">${escapeHtml(member.jiraSummary)}</div>`
+      : '';
 
     return `
       <div class="member-card">
         <div class="member-header">
           <span class="member-name">@${escapeHtml(member.githubUsername)}</span>
-          <span class="member-stats">${prsMerged} merged, ${prsOpen} open, ${reviews} reviews</span>
+          <span class="member-stats">${prsMerged} merged, ${prsOpen} open, ${reviews} reviews${jiraStats}</span>
         </div>
         <div class="member-summary">${escapeHtml(member.aiSummary)}</div>
+        ${jiraSummaryHtml}
       </div>
     `;
   }).join('');
@@ -276,9 +323,12 @@ export function buildManagerEmailHtml(
             <span style="font-size: 28px; font-weight: 700; display: block; color: ${teamSummary.stuckPRsCount > 0 ? '#ffc107' : '#ffffff'};">${teamSummary.stuckPRsCount}</span>
             <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #a0a0a0;">Need Attention</span>
           </td>
+          ${jiraStatsCols}
         </tr>
       </table>
     </div>
+
+    ${sprintHealthHtml}
 
     <div class="section">
       <div class="section-title">Summary</div>
@@ -329,7 +379,7 @@ export function buildDeveloperEmailHtml(
     return buildManagerEmailHtml(report, context);
   }
 
-  const { shipped, inFlight, reviewActivity, aiSummary } = memberData;
+  const { shipped, inFlight, reviewActivity, aiSummary, jiraIssuesCompleted, jiraIssuesInProgress, jiraSummary } = memberData;
 
   const waitingForReview = report.memberSummaries
     .flatMap(m => m.inFlight)
@@ -383,6 +433,36 @@ export function buildDeveloperEmailHtml(
     `
     : '';
 
+  const jiraCompletedHtml = jiraIssuesCompleted && jiraIssuesCompleted.length > 0
+    ? `
+      <div class="section">
+        <div class="section-title">Jira - Completed</div>
+        <ul class="pr-list">
+          ${jiraIssuesCompleted.map(issue => `
+            <li><a href="${escapeHtml(issue.url)}">${escapeHtml(issue.key)}</a> ${escapeHtml(issue.summary)} <span class="pr-status">(${escapeHtml(issue.issueType)})</span></li>
+          `).join('')}
+        </ul>
+      </div>
+    `
+    : '';
+
+  const jiraInProgressHtml = jiraIssuesInProgress && jiraIssuesInProgress.length > 0
+    ? `
+      <div class="section">
+        <div class="section-title">Jira - In Progress</div>
+        <ul class="pr-list">
+          ${jiraIssuesInProgress.map(issue => `
+            <li><a href="${escapeHtml(issue.url)}">${escapeHtml(issue.key)}</a> ${escapeHtml(issue.summary)}${issue.storyPoints ? ` <span class="pr-status">(${issue.storyPoints} pts)</span>` : ''}</li>
+          `).join('')}
+        </ul>
+      </div>
+    `
+    : '';
+
+  const jiraSummaryHtml = jiraSummary
+    ? `<p style="font-size: 14px; color: #4338ca; margin-top: 8px;">${escapeHtml(jiraSummary)}</p>`
+    : '';
+
   return `
 <!DOCTYPE html>
 <html>
@@ -414,6 +494,12 @@ export function buildDeveloperEmailHtml(
             <span style="font-size: 28px; font-weight: 700; display: block;">${reviewActivity}</span>
             <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #a0a0a0;">Reviews Given</span>
           </td>
+          ${jiraIssuesCompleted && jiraIssuesCompleted.length > 0 ? `
+          <td align="center" style="padding: 8px;">
+            <span style="font-size: 28px; font-weight: 700; display: block;">${jiraIssuesCompleted.length}</span>
+            <span style="font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #a0a0a0;">Tickets Done</span>
+          </td>
+          ` : ''}
         </tr>
       </table>
     </div>
@@ -421,11 +507,14 @@ export function buildDeveloperEmailHtml(
     <div class="section">
       <div class="section-title">Summary</div>
       <p class="summary-text">${escapeHtml(aiSummary)}</p>
+      ${jiraSummaryHtml}
     </div>
 
     ${shippedHtml}
     ${inFlightHtml}
     ${reviewRequestsHtml}
+    ${jiraCompletedHtml}
+    ${jiraInProgressHtml}
 
     <div style="text-align: center;">
       <a href="${escapeHtml(dashboardUrl)}" class="cta-button">View Team Report</a>

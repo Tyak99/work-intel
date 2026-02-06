@@ -10,12 +10,31 @@ interface TeamMember {
   user_id: string;
   role: 'admin' | 'member';
   github_username: string | null;
+  jira_account_id?: string | null;
   joined_at: string;
   users: {
     id: string;
     email: string;
     display_name: string | null;
   };
+}
+
+interface JiraUserMatch {
+  accountId: string;
+  displayName: string;
+  emailAddress?: string;
+  avatarUrl?: string;
+  active: boolean;
+}
+
+interface JiraMemberMatch {
+  memberId: string;
+  memberEmail: string;
+  memberDisplayName: string | null;
+  githubUsername: string | null;
+  suggestedJiraUser: JiraUserMatch | null;
+  confidence: 'high' | 'medium' | 'low' | 'none';
+  matchReason: string;
 }
 
 interface TeamInvite {
@@ -71,6 +90,10 @@ interface TeamStore {
   currentUserRole: 'admin' | 'member' | null;
   jiraProjects: JiraProject[];
   isLoadingJiraProjects: boolean;
+  jiraMemberMatches: JiraMemberMatch[];
+  jiraAvailableUsers: JiraUserMatch[];
+  isLoadingJiraMatches: boolean;
+  isConfirmingJiraMatches: boolean;
 
   fetchTeam: (teamId: string) => Promise<void>;
   fetchMembers: (teamId: string) => Promise<void>;
@@ -88,6 +111,9 @@ interface TeamStore {
   disconnectJira: (teamId: string) => Promise<void>;
   fetchJiraProjects: (teamId: string) => Promise<void>;
   setJiraProject: (teamId: string, projectKeys: string[]) => Promise<void>;
+  fetchJiraMemberMatches: (teamId: string) => Promise<void>;
+  updateJiraMatch: (memberId: string, jiraUser: JiraUserMatch | null) => void;
+  confirmJiraMemberMatches: (teamId: string) => Promise<void>;
   reset: () => void;
 }
 
@@ -102,6 +128,10 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
   currentUserRole: null,
   jiraProjects: [],
   isLoadingJiraProjects: false,
+  jiraMemberMatches: [],
+  jiraAvailableUsers: [],
+  isLoadingJiraMatches: false,
+  isConfirmingJiraMatches: false,
 
   fetchTeam: async (teamId: string) => {
     set({ isLoading: true });
@@ -440,6 +470,80 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
     }
   },
 
+  fetchJiraMemberMatches: async (teamId: string) => {
+    if (get().isLoadingJiraMatches) return; // Prevent concurrent calls
+    set({ isLoadingJiraMatches: true });
+    try {
+      const response = await fetch(`/api/teams/${teamId}/jira/match-members`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to match Jira members');
+      }
+
+      const data = await response.json();
+      set({
+        jiraMemberMatches: data.matches || [],
+        jiraAvailableUsers: data.jiraUsers || [],
+        isLoadingJiraMatches: false,
+      });
+    } catch (error: any) {
+      console.error('Error matching Jira members:', error);
+      set({ jiraMemberMatches: [], jiraAvailableUsers: [], isLoadingJiraMatches: false });
+      toast.error(error.message || 'Failed to match Jira members');
+    }
+  },
+
+  updateJiraMatch: (memberId: string, jiraUser: JiraUserMatch | null) => {
+    set(state => ({
+      jiraMemberMatches: state.jiraMemberMatches.map(m =>
+        m.memberId === memberId
+          ? {
+              ...m,
+              suggestedJiraUser: jiraUser,
+              confidence: jiraUser ? 'high' as const : 'none' as const,
+              matchReason: jiraUser ? 'Manual selection' : 'Cleared',
+            }
+          : m
+      ),
+    }));
+  },
+
+  confirmJiraMemberMatches: async (teamId: string) => {
+    set({ isConfirmingJiraMatches: true });
+    try {
+      const matches = get().jiraMemberMatches;
+      const mappings = matches.map(m => ({
+        userId: m.memberId,
+        jiraAccountId: m.suggestedJiraUser?.accountId || null,
+      }));
+
+      const response = await fetch(`/api/teams/${teamId}/jira/confirm-members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ mappings }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to confirm mappings');
+      }
+
+      set({ isConfirmingJiraMatches: false });
+      toast.success('Jira member mappings saved!');
+      // Refresh members so jira_account_id is up-to-date in the store
+      await get().fetchMembers(teamId);
+    } catch (error: any) {
+      console.error('Error confirming Jira matches:', error);
+      set({ isConfirmingJiraMatches: false });
+      toast.error(error.message || 'Failed to confirm mappings');
+    }
+  },
+
   reset: () => {
     set({
       team: null,
@@ -452,6 +556,10 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
       currentUserRole: null,
       jiraProjects: [],
       isLoadingJiraProjects: false,
+      jiraMemberMatches: [],
+      jiraAvailableUsers: [],
+      isLoadingJiraMatches: false,
+      isConfirmingJiraMatches: false,
     });
   },
 }));

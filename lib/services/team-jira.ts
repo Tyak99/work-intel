@@ -11,12 +11,21 @@ export interface JiraIssue {
   issueType: string;
   priority: string;
   assignee: string | null;
+  assigneeAccountId: string | null;
   reporter: string;
   created: string;
   updated: string;
   url: string;
   storyPoints?: number;
   labels: string[];
+}
+
+export interface JiraUser {
+  accountId: string;
+  displayName: string;
+  emailAddress?: string;
+  avatarUrl?: string;
+  active: boolean;
 }
 
 export interface JiraSprint {
@@ -45,6 +54,7 @@ export interface TeamJiraData {
   allProjectsData: JiraSprintData[];
   memberAssignments: Array<{
     assignee: string;
+    assigneeAccountId: string | null;
     issues: JiraIssue[];
     completedThisWeek: number;
     inProgress: number;
@@ -302,6 +312,7 @@ function mapJiraIssue(issue: any, siteUrl: string): JiraIssue {
     issueType: fields.issuetype?.name || 'Unknown',
     priority: fields.priority?.name || 'Medium',
     assignee: fields.assignee?.displayName || null,
+    assigneeAccountId: fields.assignee?.accountId || null,
     reporter: fields.reporter?.displayName || 'Unknown',
     created: fields.created,
     updated: fields.updated,
@@ -326,26 +337,31 @@ function mapStatusCategory(key: string | undefined): 'new' | 'indeterminate' | '
 }
 
 /**
- * Group issues by assignee for member summaries
+ * Group issues by assignee accountId for member summaries.
+ * Uses accountId as the key for reliable matching to team members.
  */
 function groupIssuesByAssignee(sprintData: JiraSprintData): TeamJiraData['memberAssignments'] {
-  const assigneeMap = new Map<string, JiraIssue[]>();
+  // Key by accountId when available, fall back to display name for unassigned
+  const assigneeMap = new Map<string, { displayName: string; accountId: string | null; issues: JiraIssue[] }>();
 
-  // Group all sprint issues by assignee
   for (const issue of sprintData.sprintIssues) {
-    const assignee = issue.assignee || 'Unassigned';
-    if (!assigneeMap.has(assignee)) {
-      assigneeMap.set(assignee, []);
+    const key = issue.assigneeAccountId || issue.assignee || 'Unassigned';
+    if (!assigneeMap.has(key)) {
+      assigneeMap.set(key, {
+        displayName: issue.assignee || 'Unassigned',
+        accountId: issue.assigneeAccountId,
+        issues: [],
+      });
     }
-    assigneeMap.get(assignee)!.push(issue);
+    assigneeMap.get(key)!.issues.push(issue);
   }
 
-  // Convert to array with stats
-  return Array.from(assigneeMap.entries()).map(([assignee, issues]) => ({
-    assignee,
+  return Array.from(assigneeMap.values()).map(({ displayName, accountId, issues }) => ({
+    assignee: displayName,
+    assigneeAccountId: accountId,
     issues,
     completedThisWeek: sprintData.recentlyCompleted.filter(
-      (i) => i.assignee === assignee
+      (i) => (accountId ? i.assigneeAccountId === accountId : i.assignee === displayName)
     ).length,
     inProgress: issues.filter((i) => i.statusCategory === 'indeterminate').length,
   }));
@@ -357,6 +373,58 @@ function groupIssuesByAssignee(sprintData: JiraSprintData): TeamJiraData['member
 export async function isJiraConfigured(teamId: string): Promise<boolean> {
   const config = await getJiraIntegrationConfig(teamId);
   return config !== null && ((config.project_keys?.length ?? 0) > 0 || !!config.project_key);
+}
+
+/**
+ * Fetch assignable Jira users for the team's configured projects.
+ * Uses the multiProjectSearch endpoint to get all users who can be assigned issues.
+ */
+export async function fetchAssignableJiraUsers(teamId: string): Promise<JiraUser[]> {
+  const accessToken = await getValidAccessToken(teamId);
+  if (!accessToken) {
+    throw new Error('No valid Jira access token');
+  }
+
+  const config = await getJiraIntegrationConfig(teamId);
+  if (!config) {
+    throw new Error('Jira not configured');
+  }
+
+  const projectKeys = config.project_keys || (config.project_key ? [config.project_key] : []);
+  if (projectKeys.length === 0) {
+    throw new Error('No Jira projects configured');
+  }
+
+  const baseUrl = `${ATLASSIAN_API_URL}/ex/jira/${config.cloud_id}`;
+  const queryParam = projectKeys.join(',');
+
+  const response = await fetch(
+    `${baseUrl}/rest/api/3/user/assignable/multiProjectSearch?projectKeys=${encodeURIComponent(queryParam)}&maxResults=200`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    console.error('[TeamJira] Failed to fetch assignable users:', error);
+    throw new Error(`Failed to fetch Jira users: ${response.status}`);
+  }
+
+  const users: any[] = await response.json();
+
+  return users
+    .filter((u: any) => u.accountType === 'atlassian' && u.active)
+    .map((u: any) => ({
+      accountId: u.accountId,
+      displayName: u.displayName,
+      emailAddress: u.emailAddress,
+      avatarUrl: u.avatarUrls?.['48x48'],
+      active: u.active,
+    }));
 }
 
 /**
