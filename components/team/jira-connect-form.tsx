@@ -16,8 +16,9 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isSavingProject, setIsSavingProject] = useState(false);
 
+  const config = currentIntegration?.config;
   const isConnected = !!currentIntegration;
-  const hasProjectConfigured = currentIntegration?.config?.project_key;
+  const hasProjectConfigured = !!config?.project_key;
 
   // Fetch projects when Jira is connected but no project is configured
   useEffect(() => {
@@ -58,16 +59,16 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
                 <Check className="w-4 h-4 text-green-500" />
               </div>
               <p className="text-sm text-muted-foreground">
-                Project: {currentIntegration.config.project_key}
+                Project: {config?.project_key}
               </p>
-              {currentIntegration.config.site_url && (
+              {config?.site_url && (
                 <a
-                  href={currentIntegration.config.site_url}
+                  href={config.site_url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
                 >
-                  {currentIntegration.config.site_url.replace('https://', '')}
+                  {config.site_url.replace('https://', '')}
                   <ExternalLink className="w-3 h-3" />
                 </a>
               )}
@@ -106,7 +107,7 @@ export function JiraConnectForm({ teamId, isAdmin, currentIntegration }: JiraCon
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Connected to: {currentIntegration.config.site_url?.replace('https://', '') || 'Atlassian'}
+              Connected to: {config?.site_url?.replace('https://', '') || 'Atlassian'}
             </p>
           </div>
         </div>
