@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getServiceSupabase } from '@/lib/supabase';
+import { auditLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,8 @@ export async function GET(
       path: '/',
       maxAge: 60 * 60, // 1 hour
     });
+
+    auditLog('team.invite.accepted', { teamId: invite.team_id, email: invite.email });
 
     // Redirect to login page with context
     return NextResponse.redirect(

@@ -4,6 +4,8 @@ import {
   sendWeeklyReportsForTeam,
   TeamEmailSummary,
 } from '@/lib/services/email';
+import { getServiceSupabase } from '@/lib/supabase';
+import { auditLog } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300; // 5 minutes max for processing all teams
@@ -36,6 +38,37 @@ export async function GET(request: Request) {
   const results: TeamEmailSummary[] = [];
   const errors: Array<{ teamId: string; error: string }> = [];
 
+  // --- Cleanup expired sessions and invites ---
+  try {
+    const supabase = getServiceSupabase();
+
+    const { data: deletedSessions, error: sessionsError } = await supabase
+      .from('sessions')
+      .delete()
+      .lt('expires_at', new Date().toISOString())
+      .select('id');
+
+    if (sessionsError) {
+      console.error('Failed to cleanup expired sessions:', sessionsError.message);
+    } else {
+      console.log(`Cleaned up ${deletedSessions?.length ?? 0} expired sessions`);
+    }
+
+    const { data: deletedInvites, error: invitesError } = await supabase
+      .from('team_invites')
+      .delete()
+      .lt('expires_at', new Date().toISOString())
+      .select('id');
+
+    if (invitesError) {
+      console.error('Failed to cleanup expired invites:', invitesError.message);
+    } else {
+      console.log(`Cleaned up ${deletedInvites?.length ?? 0} expired invites`);
+    }
+  } catch (cleanupErr) {
+    console.error('Session/invite cleanup error:', cleanupErr);
+  }
+
   try {
     // 1. Get all teams with GitHub integration
     const teams = await getTeamsWithGitHubIntegration();
@@ -49,6 +82,8 @@ export async function GET(request: Request) {
         duration: Date.now() - startTime,
       });
     }
+
+    auditLog('cron.weekly_reports.started', { teamsCount: teams.length });
 
     console.log(`Processing weekly reports for ${teams.length} teams`);
 
@@ -73,6 +108,8 @@ export async function GET(request: Request) {
 
     const totalEmailsSent = results.reduce((sum, r) => sum + r.emailsSent, 0);
     const totalEmailsFailed = results.reduce((sum, r) => sum + r.emailsFailed, 0);
+
+    auditLog('cron.weekly_reports.completed', { successCount: results.length, failCount: errors.length });
 
     return NextResponse.json({
       success: true,

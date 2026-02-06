@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamMembership, requireTeamAdmin } from '@/lib/services/team-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { auditLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,6 +99,8 @@ export async function POST(
       console.error('Error adding member:', error);
       return NextResponse.json({ error: 'Failed to add member' }, { status: 500 });
     }
+
+    auditLog('team.member.added', { teamId, userId: targetUser.id, role: role === 'admin' ? 'admin' : 'member', addedBy: user.id });
 
     return NextResponse.json({ member }, { status: 201 });
   } catch (error) {

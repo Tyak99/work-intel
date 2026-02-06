@@ -60,8 +60,10 @@ export async function GET(req: NextRequest) {
 
       if (isLoginFlow) {
         // LOGIN FLOW: Create/find user and session
-        // 1. Find or create user by email
-        const user = await findOrCreateUser(grant.email);
+        // 1. Find or create user by email (track if new for analytics)
+        const existingCheck = await findOrCreateUser(grant.email);
+        const user = existingCheck;
+        const isNewUser = new Date(user.created_at).getTime() > Date.now() - 10000;
 
         // 2. Link the Nylas grant to the user
         await linkNylasGrantToUser(user.id, tempUserId);
@@ -97,7 +99,7 @@ export async function GET(req: NextRequest) {
 
         // Default: redirect to dashboard
         return NextResponse.redirect(
-          `${baseUrl}/?auth=success&email=${encodeURIComponent(grant.email)}&provider=${grant.provider}`
+          `${baseUrl}/?auth=success&email=${encodeURIComponent(grant.email)}&provider=${grant.provider}${isNewUser ? '&new_user=true' : ''}`
         );
       } else {
         // CONNECT FLOW: Existing user connecting additional account

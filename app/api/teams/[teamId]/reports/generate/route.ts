@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamMembership } from '@/lib/services/team-auth';
 import { generateWeeklyReport } from '@/lib/services/team-report';
 import { rateLimit } from '@/lib/rate-limit';
+import { auditLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,8 @@ export async function POST(
     }
 
     const report = await generateWeeklyReport(teamId);
+
+    auditLog('team.report.generated', { teamId, generatedBy: user.id });
 
     return NextResponse.json({ report });
   } catch (error) {

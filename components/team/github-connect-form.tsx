@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTeamStore } from '@/lib/team-store';
 import { Github, Check, X, Loader2 } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 
 interface GitHubConnectFormProps {
   teamId: string;
@@ -21,6 +22,7 @@ export function GitHubConnectForm({ teamId, isAdmin, currentIntegration }: GitHu
     if (!token || !org) return;
     setIsConnecting(true);
     await connectGitHub(teamId, token, org);
+    trackEvent('github.connected', { teamId });
     setIsConnecting(false);
     setToken('');
   };

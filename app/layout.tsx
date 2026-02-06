@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter, Rajdhani, JetBrains_Mono } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from '@/components/theme-provider';
+import { AnalyticsProvider } from '@/components/analytics-provider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const rajdhani = Rajdhani({
@@ -57,7 +58,9 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} ${rajdhani.variable} ${jetbrainsMono.variable} font-sans bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary`}>
         <ThemeProvider>
+          <AnalyticsProvider>
           {children}
+          </AnalyticsProvider>
           <Toaster
             position="top-right"
             toastOptions={{

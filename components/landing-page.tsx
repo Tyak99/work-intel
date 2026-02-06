@@ -14,6 +14,7 @@ import {
   Check,
   Activity,
 } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 
 function NavBar() {
   return (
@@ -36,6 +37,7 @@ function NavBar() {
           </Link>
           <Link
             href="/login"
+            onClick={() => trackEvent('landing.cta_clicked', { location: 'nav' })}
             className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 transition-colors"
           >
             Start Free
@@ -75,6 +77,7 @@ function HeroSection() {
         <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/login"
+            onClick={() => trackEvent('landing.cta_clicked', { location: 'hero' })}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:shadow-xl hover:shadow-indigo-600/25 transition-all"
           >
             Start Free
@@ -451,6 +454,7 @@ function PricingSection() {
 
               <Link
                 href="/login"
+                onClick={() => trackEvent('landing.cta_clicked', { location: 'pricing', plan: plan.name })}
                 className={`block w-full text-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors ${
                   plan.highlighted
                     ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'
@@ -505,6 +509,7 @@ function FinalCTASection() {
         <div className="mt-10">
           <Link
             href="/login"
+            onClick={() => trackEvent('landing.cta_clicked', { location: 'footer' })}
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:shadow-xl hover:shadow-indigo-600/25 transition-all"
           >
             Get Started

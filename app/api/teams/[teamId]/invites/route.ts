@@ -6,6 +6,7 @@ import { requireTeamAdmin, getTeamById } from '@/lib/services/team-auth';
 import { sendTeamInviteEmail } from '@/lib/services/email';
 import { getServiceSupabase } from '@/lib/supabase';
 import { rateLimit } from '@/lib/rate-limit';
+import { auditLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -204,6 +205,8 @@ export async function POST(
     if (!emailResult.success) {
       console.error('Failed to send invite email:', emailResult.error);
     }
+
+    auditLog('team.invite.sent', { teamId, email, invitedBy: user.id });
 
     return NextResponse.json({ invite, emailSent: emailResult.success }, { status: 201 });
   } catch (error) {

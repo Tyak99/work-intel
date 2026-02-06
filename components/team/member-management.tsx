@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useTeamStore } from '@/lib/team-store';
 import { UserPlus, Trash2, Edit2, Check, X, Loader2, Mail, Clock, RotateCcw } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,6 +70,7 @@ export function MemberManagement({ teamId, teamName, members, isAdmin, currentUs
     if (!newEmail) return;
     setIsAdding(true);
     await sendInvite(teamId, newEmail, newGithub || undefined);
+    trackEvent('invite.sent', { teamId });
     setIsAdding(false);
     setNewEmail('');
     setNewGithub('');

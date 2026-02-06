@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamAdmin } from '@/lib/services/team-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { auditLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +58,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Failed to remove member' }, { status: 500 });
     }
 
+    auditLog('team.member.removed', { teamId, memberId, removedBy: user.id });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error removing member:', error);
@@ -99,6 +102,18 @@ export async function PATCH(
       return NextResponse.json({ error: 'No valid updates provided' }, { status: 400 });
     }
 
+    // Fetch old role before update for audit trail
+    let oldRole: string | undefined;
+    if (parsed.data.role !== undefined) {
+      const { data: current } = await getServiceSupabase()
+        .from('team_members')
+        .select('role')
+        .eq('id', memberId)
+        .eq('team_id', teamId)
+        .single();
+      oldRole = current?.role;
+    }
+
     const { data: member, error } = await getServiceSupabase()
       .from('team_members')
       .update(updates)
@@ -109,6 +124,10 @@ export async function PATCH(
 
     if (error) {
       return NextResponse.json({ error: 'Failed to update member' }, { status: 500 });
+    }
+
+    if (parsed.data.role !== undefined && oldRole !== parsed.data.role) {
+      auditLog('team.member.role_changed', { teamId, memberId, oldRole, newRole: parsed.data.role, changedBy: user.id });
     }
 
     return NextResponse.json({ member });

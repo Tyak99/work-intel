@@ -10,6 +10,7 @@ import { NeedsAttention } from '@/components/team/needs-attention';
 import { MemberCard } from '@/components/team/member-card';
 import { ReportGenerateButton } from '@/components/team/report-generate-button';
 import { OnboardingWizard } from '@/components/team/onboarding-wizard';
+import { WeeklyTrends } from '@/components/team/weekly-trends';
 import { Settings, GitMerge, GitPullRequest, Users, MessageSquare, BarChart3, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -151,6 +152,8 @@ export default function TeamDashboardPage() {
         ) : report ? (
           <>
             <SummaryBanner summary={report.teamSummary} />
+
+            {teamId && <WeeklyTrends teamId={teamId} />}
 
             <NeedsAttention items={report.needsAttention} />
 

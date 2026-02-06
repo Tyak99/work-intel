@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { trackEvent } from '@/lib/analytics';
 import {
   Dialog,
   DialogContent,
@@ -56,6 +57,7 @@ export function CreateTeamModal({ isOpen, onClose }: CreateTeamModalProps) {
       }
 
       // Success - redirect to new team dashboard
+      trackEvent('team.created', { teamName: name.trim() });
       const slug = data.team.slug;
       onClose();
       setName('');

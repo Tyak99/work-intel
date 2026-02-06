@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plus, Users } from 'lucide-react';
 import { useDashboardStore } from '@/lib/store';
+import { trackEvent } from '@/lib/analytics';
 import { NavHeader, TeamInfo } from '@/components/nav-header';
 import { TeamCard } from '@/components/team/team-card';
 import { CreateTeamModal } from '@/components/team/create-team-modal';
@@ -19,9 +21,23 @@ export default function Home() {
   const [isLoadingTeams, setIsLoadingTeams] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const searchParams = useSearchParams();
+  const trackedAuth = useRef(false);
+
   useEffect(() => {
     fetchCurrentUser();
   }, [fetchCurrentUser]);
+
+  // Track signup/login from OAuth callback
+  useEffect(() => {
+    if (trackedAuth.current) return;
+    const authSuccess = searchParams.get('auth');
+    if (authSuccess === 'success' && user) {
+      trackedAuth.current = true;
+      const isNew = searchParams.get('new_user') === 'true';
+      trackEvent(isNew ? 'user.signed_up' : 'user.logged_in');
+    }
+  }, [searchParams, user]);
 
   // Load teams when user is available
   useEffect(() => {

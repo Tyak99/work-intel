@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getCurrentUser } from '@/lib/services/auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { auditLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +54,8 @@ export async function POST(req: NextRequest) {
       await getServiceSupabase().from('teams').delete().eq('id', team.id);
       return NextResponse.json({ error: 'Failed to create team' }, { status: 500 });
     }
+
+    auditLog('team.created', { teamId: team.id, teamName: team.name, createdBy: user.id });
 
     return NextResponse.json({ team }, { status: 201 });
   } catch (error) {

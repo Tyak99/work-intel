@@ -5,6 +5,7 @@ import { requireTeamAdmin } from '@/lib/services/team-auth';
 import { getServiceSupabase } from '@/lib/supabase';
 import { encrypt } from '@/lib/utils/encryption';
 import { Octokit } from '@octokit/rest';
+import { auditLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +72,8 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to connect GitHub' }, { status: 500 });
     }
 
+    auditLog('team.github.connected', { teamId, org, connectedBy: user.id });
+
     return NextResponse.json({ integration: { id: data.id, provider: 'github', org } });
   } catch (error) {
     console.error('Error connecting GitHub:', error);
@@ -104,6 +107,8 @@ export async function DELETE(
     if (error) {
       return NextResponse.json({ error: 'Failed to disconnect GitHub' }, { status: 500 });
     }
+
+    auditLog('team.github.disconnected', { teamId, disconnectedBy: user.id });
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/services/auth';
 import { requireTeamAdmin } from '@/lib/services/team-auth';
 import { getServiceSupabase } from '@/lib/supabase';
+import { auditLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +44,8 @@ export async function DELETE(
       console.error('Error revoking invite:', error);
       return NextResponse.json({ error: 'Failed to revoke invite' }, { status: 500 });
     }
+
+    auditLog('team.invite.revoked', { teamId, inviteId, revokedBy: user.id });
 
     return NextResponse.json({ success: true });
   } catch (error) {
