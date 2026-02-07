@@ -205,8 +205,16 @@ export const useTeamStore = create<TeamStore>((set, get) => ({
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to generate report');
+        let errorMessage = 'Failed to generate report';
+        try {
+          const data = await response.json();
+          errorMessage = data.error || errorMessage;
+        } catch {
+          if (response.status === 504) {
+            errorMessage = 'Report generation timed out. Please try again.';
+          }
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();

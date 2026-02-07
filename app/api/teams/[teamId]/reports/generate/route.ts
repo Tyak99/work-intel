@@ -6,6 +6,7 @@ import { rateLimit } from '@/lib/rate-limit';
 import { auditLog } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 120; // Report generation involves GitHub + Jira + Anthropic API calls
 
 export async function POST(
   req: NextRequest,
